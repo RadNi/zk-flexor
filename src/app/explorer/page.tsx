@@ -12,30 +12,9 @@ import { readContract } from '@wagmi/core'
 import { createPublicClient, http } from 'viem'
 import { hashPersonalMessage } from '@ethereumjs/util'
 import { ethers } from 'ethers'
+import { fullVerifyProof } from './utils'
 
 const ITEMS_PER_PAGE = 10
-
-
-// Find chain config by chainId from wagmiConfig.chains
-function getChainById(chainId: number) {
-  return wagmiConfig.chains.find((chain) => chain.id === chainId)
-}
-
-async function getBlockByChainId(chainId: number, blockNumber: bigint ) {
-  const chain = getChainById(chainId)
-  if (!chain) throw new Error(`Unsupported chainId ${chainId}`)
-
-  // Create client dynamically for this chain using its first RPC url
-  const client = createPublicClient({
-    chain,
-    transport: http(chain.rpcUrls.default.http[0]), // or chain.rpcUrls.public.http[0]
-  })
-
-  // Fetch block
-  const block = await client.getBlock({ blockNumber })
-
-  return block
-}
 
 
 export default function ExplorerPage() {
@@ -59,134 +38,53 @@ export default function ExplorerPage() {
   }, [page, totalPages])
 
   const verifyProof = async (claimId: string) => {
-    setVerifying((prev) => new Set(prev).add(claimId))
+  console.log("Start verifying:", claimId)
 
-    try {
-        const result = await readContract(wagmiConfig, {
-            abi,
-            address: FLEXOR_ADDRESS,
-            functionName: 'getClaim',
-            args: [claimId],
-        }) as {
-            proof: `0x${string}`, publicInputs: `0x${string}`, full_message: string, flexor_hl: string, flexor_address: `0x${string}`, chainId: bigint, blockNumber: bigint
-        }
-        const proof = fromHex(result.proof, 'bytes')
-        const publicInputs = Array.from(fromHex(result.publicInputs, 'bytes'), (byte) => "0x" + byte.toString(16).padStart(2, '0')) 
-        const full_message = JSON.parse(result.full_message)
-        console.log('Contract result:', full_message)
-        console.log(result)
-        let name_check = false
-        let verification_check = false
-        let stateRoot_check = false
-        let address_check = false
-        let balance_target_check = false
-        let message_hash_check = false
-        
-        // verify hl_name
-        if ("flexor_name" in full_message)
-            name_check = full_message.flexor_name.endsWith(".hl") && (result.flexor_hl === full_message.flexor_name)
-        else
-            name_check = result.flexor_hl === ""
-        // verify address
-        if ("flexor_address" in full_message)
-            address_check = result.flexor_address.toLowerCase() === full_message.flexor_address.toLowerCase()
-        else
-            address_check = result.flexor_address === "0x0000000000000000000000000000000000000000"
-        // verify stateRoot
-        stateRoot_check = false
+  // Add to verifying set
+  setVerifying((prev) => {
+    const newSet = new Set(prev)
+    newSet.add(claimId)
+    return newSet
+  })
 
-        let status_message = ""
-        try {
-            let block = await getBlockByChainId(+result.chainId.toString(), result.blockNumber)
-            console.log(block.stateRoot)
-            console.log(result.publicInputs.substring(0, 66))
-            stateRoot_check = block.stateRoot === result.publicInputs.substring(0, 66)
-        } catch (err) {
-            status_message += (err + " - ")
-        }
+  try {
+    // Await if fullVerifyProof is async
+    const outcome = await fullVerifyProof(claimId)
 
-        // balance target
-        const balance_target_length = +BigInt(publicInputs[96]!).toString()
-        const balance_target = BigInt("0x" + result.publicInputs.substring(2 + 32*4, 2 + 32 * 4 + balance_target_length * 2))
-        balance_target_check = Math.floor(parseFloat(full_message.balance_target) * 1e18).toString() === balance_target.toString()
-
-        // message hash
-        const msgBuf = Buffer.from(result.full_message)
-        const hashed_message = hashPersonalMessage(msgBuf)
-        message_hash_check = toHex(hashed_message) === "0x" + result.publicInputs.substring(2 + 32*2, 2 + 32*4)
-
-        // verify proof
-        verification_check = await verifyFinalProof(proof, publicInputs)
-
-        console.log("name_check ", name_check)
-        console.log("address_check ", address_check)
-        console.log("stateRoot_check ", stateRoot_check)
-        console.log("verification_check ", verification_check)
-        console.log("balance_target_check", balance_target_check)
-        console.log("message_hash_check", message_hash_check)
-
-        if (!name_check)
-            status_message += "name check faild - "
-        if (!address_check)
-            status_message += "address check faild - "
-        if (!stateRoot_check)
-            status_message += "state root check faild - "
-        if (!verification_check)
-            status_message += "proof verification faild - "
-        if (!balance_target_check)
-            status_message += "balance target check faild - "
-        if (!message_hash_check)
-            status_message += "message check faild - "
-
-        let status: 'verified' | 'rejected' | 'warning' = 'rejected'
-        if (name_check && verification_check && address_check && balance_target_check && message_hash_check) {
-            if (stateRoot_check) {
-                status = 'verified'
-                status_message = 'Proof is verified'
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === claimId
+          ? {
+              ...item,
+              ...outcome,
             }
-            else if (result.chainId === 999n) {
-                status_message = 'Hyperliquid RPCs are broken to verify state root!'
-                status = 'warning'
+          : item
+      )
+    )
+  } catch (err) {
+    console.error('Verification failed:', err)
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === claimId
+          ? {
+              ...item,
+              status: 'rejected',
+              statusMessage: 'Verification failed. Could not fetch claim.',
             }
-        }
-        // Dynamically decide outcome from result if needed
-        const outcome: { status: 'verified' | 'rejected' | 'warning'; message: string } = {
-            status: status,
-            message: status_message
-        }
+          : item
+      )
+    )
+  } finally {
+    // Remove from verifying set
+    setVerifying((prev) => {
+      const newSet = new Set(prev)
+      newSet.delete(claimId)
+      return newSet
+    })
+    console.log("Finished verifying:", claimId)
+  }
+}
 
-        setItems((prev) =>
-        prev.map((item) =>
-            item.id === claimId
-            ? {
-                ...item,
-                ...outcome,
-                }
-            : item
-        )
-        )
-    } catch (err) {
-        console.error('Verification failed:', err)
-        // Optional: handle error state here if needed
-        setItems((prev) =>
-        prev.map((item) =>
-            item.id === claimId
-            ? {
-                ...item,
-                status: 'rejected',
-                message: 'Verification failed. Could not fetch claim.',
-                }
-            : item
-        )
-        )
-    } finally {
-        setVerifying((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(claimId)
-        return newSet
-        })
-    }
-    }
 
 
   return (
@@ -202,72 +100,74 @@ export default function ExplorerPage() {
       />
 
       <div className="flex flex-col gap-4">
-  {paginatedItems.length === 0 ? (
-    <p>No items found.</p>
-  ) : (
-    <>
-      {/* Header Row */}
-      <div className="hidden md:flex justify-between px-4 py-2 bg-gray-800 rounded text-sm text-gray-400 font-semibold">
-        <div className="w-1/5">Name</div>
-        <div className="w-1/5">Tx Hash</div>
-        <div className="w-1/5">Address</div>
-        <div className="w-1/6">Balance Target</div>
-        <div className="w-1/6">Chain ID</div>
-        <div className="w-1/6">Status</div>
-      </div>
-
-      {/* Data Rows */}
-      {paginatedItems.map((item) => (
-        <Link key={item.txHash} href={`/explorer/${item.id}`}>
-          <div className="p-4 bg-gray-900 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-gray-800 transition cursor-pointer space-y-2 md:space-y-0 md:space-x-6">
-            <div className="w-full md:w-1/5 font-semibold whitespace-nowrap truncate">{item.name}</div>
-            <div className="w-full md:w-1/5 text-sm text-gray-400 whitespace-nowrap truncate">{shortenHash(item.txHash)}</div>
-            <div className="w-full md:w-1/5 text-sm text-gray-400 whitespace-nowrap truncate">{shortenHash(item.address)}</div>
-            <div className="w-full md:w-1/6 text-sm text-gray-400 whitespace-nowrap truncate">{ethers.formatEther(item.balance_target)}
-              {/* {item.balance_target ? `${(item.balance_target / 10n**18n).toFixed(4)} ETH` : '—'} */}
+        {paginatedItems.length === 0 ? (
+            <p>No items found.</p>
+        ) : (
+        <>
+            {/* Header Row */}
+            <div className="hidden md:flex justify-between px-4 py-2 bg-gray-800 rounded text-sm text-gray-400 font-semibold">
+                <div className="w-1/5">Name</div>
+                <div className="w-1/5">Tx Hash</div>
+                <div className="w-1/5">Address</div>
+                <div className="w-1/6">Balance Target</div>
+                <div className="w-1/6">Chain ID</div>
+                <div className="w-1/6">Status</div>
             </div>
-            <div className="w-full md:w-1/6 text-sm text-gray-500 whitespace-nowrap">{item.chainId}</div>
 
-            <div className="w-full md:w-1/6 relative group text-sm whitespace-nowrap">
-              {['verified', 'rejected', 'warning'].includes(item.status!) ? (
-                <span
-                  className={
-                    item.status === 'verified'
-                      ? 'text-green-400'
-                      : item.status === 'rejected'
-                      ? 'text-red-400'
-                      : 'text-yellow-400'
-                  }
-                >
-                  {item.status === 'verified'
-                    ? '✔ Verified'
-                    : item.status === 'rejected'
-                    ? '✖ Rejected'
-                    : '⚠ Warning'}
-                </span>
-              ) : verifying.has(item.id) ? (
-                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    verifyProof(item.id)
-                  }}
-                  className="bg-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-700 transition font-medium shadow"
-                >
-                  Click to verify
-                </button>
-              )}
-              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-3 py-2 rounded shadow-lg z-10 w-max opacity-0 group-hover:opacity-100 transition-opacity max-w-xs break-words">
-                {item.message}
-              </div>
-            </div>
-          </div>
-        </Link>
-      ))}
-    </>
-  )}
-</div>
+            {/* Data Rows */}
+            {paginatedItems.map((item) => (
+                <Link key={item.txHash} href={`/explorer/${item.id}`}>
+                <div className="p-4 bg-gray-900 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-gray-800 transition cursor-pointer space-y-2 md:space-y-0 md:space-x-6">
+                    <div className="w-full md:w-1/5 font-semibold whitespace-nowrap truncate">{item.name}</div>
+                    <div className="w-full md:w-1/5 text-sm text-gray-400 whitespace-nowrap truncate">{shortenHash(item.txHash)}</div>
+                    <div className="w-full md:w-1/5 text-sm text-gray-400 whitespace-nowrap truncate">{shortenHash(item.address)}</div>
+                    <div className="w-full md:w-1/6 text-sm text-gray-400 whitespace-nowrap truncate">{ethers.formatEther(item.balance_target)}
+                    {/* {item.balance_target ? `${(item.balance_target / 10n**18n).toFixed(4)} ETH` : '—'} */}
+                    </div>
+                    <div className="w-full md:w-1/6 text-sm text-gray-500 whitespace-nowrap">{item.chainId}</div>
+
+                    <div className="w-full md:w-1/6 relative group text-sm whitespace-nowrap">
+                    {['verified', 'rejected', 'warning'].includes(item.status!) ? (
+                        <span
+                        className={
+                            item.status === 'verified'
+                            ? 'text-green-400'
+                            : item.status === 'rejected'
+                            ? 'text-red-400'
+                            : 'text-yellow-400'
+                        }
+                        >
+                        {item.status === 'verified'
+                            ? '✔ Verified'
+                            : item.status === 'rejected'
+                            ? '✖ Rejected'
+                            : '⚠ Warning'}
+                        </span>
+                    ) : verifying.has(item.id) ? (
+                        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                        <button
+                        onClick={(e) => {
+                            e.preventDefault()
+                            verifyProof(item.id)
+                        }}
+                        className="bg-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-700 transition font-medium shadow"
+                        >
+                        Click to verify
+                        </button>
+                    )}
+                    {['verified', 'rejected', 'warning'].includes(item.status!) && item.statusMessage && (
+                        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-3 py-2 rounded shadow-lg z-10 w-max opacity-0 group-hover:opacity-100 transition-opacity max-w-xs break-words">
+                            {item.statusMessage}
+                        </div>
+                    )}
+                    </div>
+                </div>
+                </Link>
+            ))}
+        </>
+        )}
+    </div>
 
 
       <div className="flex justify-center mt-6 space-x-4">

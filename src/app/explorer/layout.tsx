@@ -17,6 +17,7 @@ export type ExplorerItem = {
   chainId: string
   status?: 'verified' | 'rejected' | 'warning'
   message?: string
+  statusMessage?: string
 }
 
 export const ExplorerCacheContext = createContext<{
@@ -102,7 +103,7 @@ export default function ExplorerLayout({ children }) {
     eventName: 'ProofSubmitted',
     listener(log) {
       // log is the parsed event args
-      const { id, address, name, txHash, chainId, status, message, balance_target } = log
+      const { id, address, name, txHash, chainId, message, balance_target } = log
       const txHashStr = toHex(txHash)
       console.log("inja", log)
 
@@ -120,7 +121,6 @@ export default function ExplorerLayout({ children }) {
             txHash: txHashStr,
             chainId: chainId.toNumber(),
             balance_target: balance_target,
-            status,
             message,
             blockNumber: null, // realtime event may not have blockNumber yet
             timestamp: Date.now(),
