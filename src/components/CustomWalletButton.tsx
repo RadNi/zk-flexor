@@ -1,6 +1,7 @@
 "use client";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Image from "next/image";
 import React from "react";
 
 export default function CustomWalletButton() {
@@ -61,17 +62,17 @@ export default function CustomWalletButton() {
               <>
                 <button onClick={openChainModal} className={chainButtonClasses}>
                   {chain.hasIcon && chain.iconUrl && (
-                    <img
-                      src={chain.iconUrl}
-                      alt={chain.name ?? "Chain icon"}
-                      style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: 9999,
-                        background: chain.iconBackground,
-                        marginRight: 6,
-                        verticalAlign: "middle",
-                      }}
+                    <Image
+                        src={chain.iconUrl ?? '/fallback-icon.png'}
+                        alt={chain.name ?? 'Chain icon'}
+                        width={16}
+                        height={16}
+                        style={{
+                            borderRadius: '9999px',
+                            background: chain.iconBackground,
+                            marginRight: 6,
+                            verticalAlign: 'middle',
+                        }}
                     />
                   )}
                   {chain.name}

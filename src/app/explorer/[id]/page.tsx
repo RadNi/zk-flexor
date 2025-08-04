@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { BadgeCheck, XCircle } from 'lucide-react'
 import { fullVerifyProof, getChainById, readClaim } from '../utils'
 import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
+import type { SigningMessage } from '@/lib/types'
 
 export default function ExplorerDetailPage() {
   const params = useParams()
@@ -13,7 +14,7 @@ export default function ExplorerDetailPage() {
   const { items, setItems } = useContext(ExplorerCacheContext)
   const [verifying, setVerifying] = useState(false)
 
-  const item = items.find((itm) => itm.id.toString() === id?.toString()) || null
+  const item = items.find((itm) => itm.id.toString() === id?.toString()) ?? null
 
   // Load message on mount
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function ExplorerDetailPage() {
     const loadMessage = async () => {
         try {
         const data = await readClaim(id!.toString())
-        const fullMessage = JSON.parse(data.full_message)
+        const fullMessage: SigningMessage = JSON.parse(data.full_message) as SigningMessage
         console.log(fullMessage)
         const message = fullMessage.custom_message
 
@@ -40,7 +41,8 @@ export default function ExplorerDetailPage() {
         }
     }
 
-    loadMessage()
+    loadMessage().catch(err => console.error('Failed to load claim message:', err)
+)
 
     return () => {
         cancelled = true

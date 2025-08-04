@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
     <main className="h-screen flex flex-col items-center justify-center bg-gradient-to-b from-black via-gray-900 to-black text-white px-4 text-center">
@@ -11,18 +13,16 @@ export default function HomePage() {
         Protect your on-chain privacy while freely flexing..
       </p>
       <div className="flex flex-col sm:flex-row gap-4 mb-12">
-        <a
-          href="/generate"
-          className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition shadow"
-        >
-          Generate Proof
-        </a>
-        <a
-          href="/explorer"
-          className="px-8 py-4 border border-white text-white font-semibold rounded-xl hover:bg-white hover:text-black transition shadow"
-        >
-          View Explorer
-        </a>
+        <Link href="/generate">
+          <div className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition shadow">
+            Generate Proof
+          </div>
+        </Link>
+        <Link href="/explorer">
+          <div className="px-8 py-4 border border-white text-white font-semibold rounded-xl hover:bg-white hover:text-black transition shadow cursor-pointer">
+            View Explorer
+          </div>
+        </Link>
       </div>
       <p className="text-gray-400 text-lg tracking-wide font-semibold select-none">
         Powered by{' '}

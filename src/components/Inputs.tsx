@@ -17,6 +17,7 @@ export default function Inputs({
   onSubmit,
   disable,
 }: {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   onSubmit: (vals: any) => void
   disable: boolean
 }) {

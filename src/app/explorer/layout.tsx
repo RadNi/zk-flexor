@@ -1,12 +1,11 @@
 'use client'
 
-import React, { createContext, useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { ethers } from 'ethers'
 import { useAccount, useWatchContractEvent, useClient, type Config } from 'wagmi'
 import abi from "../../../public/Flexor.json"
 import { FLEXOR_ADDRESS } from '@/lib/utils'
-import { toHex } from 'viem'
-import { hostNetwork, hyperliquidMainnet, localTestnet, wagmiConfig } from '@/config/wagmi'
+import { hostNetwork } from '@/config/wagmi'
 import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
 
 export type ExplorerItem = {
@@ -32,14 +31,9 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
     }, [client])
 
   const [items, setItems] = useState<ExplorerItem[]>([]);
-  const txHashSet = useRef(new Set())
 
-  // Utility: convert bytes32 txHash to hex string
-//   const bytes32ToHexString = (bytes32) => ethers.utils.hexlify(bytes32)
-
-  // Fetch past events once on mount or when provider/chain changes
   useEffect(() => {
-    if (!provider || !account.chain) return
+    if (!provider) return
 
     let cancelled = false
 
@@ -62,16 +56,16 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
             const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.data)
             console.log(data[2])
           return {
-            id: data[0],
+            id: data[0] as string,
             address: ethers.AbiCoder.defaultAbiCoder().decode(["address"], event.topics[1]!).toString(),
-            name: data[1],
+            name: data[1] as string,
             txHash: event.transactionHash,
             chainId: BigInt(event.topics[3]!).toString(),
-            balance_target: data[2],
+            balance_target: data[2] as string,
             // message: "",
             blockNumber: event.blockNumber,
             timestamp: event.blockNumber, // could add real timestamp if needed
-            tip: data[3]
+            tip: data[3] as string
           }
         }).reverse()
 
@@ -86,7 +80,7 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
       }
     }
 
-    fetchPastEvents()
+    fetchPastEvents().catch(e => console.error('Error fetching past events:', e))
 
     return () => {
       cancelled = true

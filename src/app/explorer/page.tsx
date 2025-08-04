@@ -2,10 +2,10 @@
 
 import { useContext, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { shortenHash } from '@/hooks/utils'
 import { ethers } from 'ethers'
 import { fullVerifyProof, getChainById } from './utils'
 import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
+import { shortenHash } from '@/lib/proof_helpers'
 
 const ITEMS_PER_PAGE = 10
 
@@ -160,7 +160,7 @@ export default function ExplorerPage() {
                         <button
                         onClick={(e) => {
                             e.preventDefault()
-                            verifyProof(item.id)
+                            verifyProof(item.id).catch(e => console.log("Proof verification faild: " + e))
                         }}
                         className="bg-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-700 transition font-medium shadow"
                         >

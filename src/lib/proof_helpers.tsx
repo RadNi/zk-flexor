@@ -1,5 +1,5 @@
+import { innner_layer_vk } from "@/target/verification_keys";
 import { ethers } from "ethers";
-import { innner_layer_vk } from "./target/verification_keys";
 
 export function uint8ArrayToStringArray(uint8Array: Uint8Array) {
     return Array.from(uint8Array).map((s) => s.toString())
@@ -26,7 +26,6 @@ export function zero_public_input() {
   }
   return result
 }
-
 
 export function getInitialPublicInputs(trie_key: number[], _root: number[]) {
   const trie_key_start_index = "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -67,30 +66,10 @@ export function bigintToUint8Array(value: bigint): number[] {
     return u8;
 }
 
-
 export function buf2Bigint(buffer: ArrayBuffer) { // buffer is an ArrayBuffer
   return ethers.formatUnits("0x" + ([...new Uint8Array(buffer)]
       .map(x => x.toString(16).padStart(2, '0'))
       .join('')))
-}
-
-export type SubmitionInputs = {
-  proof: Uint8Array<ArrayBufferLike>,
-  publicInputs: Uint8Array<ArrayBufferLike>
-  chainId: number,
-  blockNumber: bigint,
-  flexor_address?: `0x${string}`,
-  flexor_hl?: `${string}.hl`,
-  full_message: string,
-  tip: bigint
-  custom_message?: string
-}
-
-export type ProofRequest = {
-  address?: `0x${string}`,
-  name?: `${string}.hl`,
-  message?: string,
-  balance: number
 }
 
 export function shortenHash(hash: string, chars = 6) {

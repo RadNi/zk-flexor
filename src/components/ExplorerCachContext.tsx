@@ -8,5 +8,5 @@ export const ExplorerCacheContext = createContext<{
   setItems: React.Dispatch<React.SetStateAction<ExplorerItem[]>>
 }>({
   items: [],
-  setItems: () => {},
+  setItems: () => undefined
 })

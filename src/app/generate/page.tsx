@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
 import Inputs from '@/components/Inputs'
 import ProgressBar from '@/components/ProgressBar'
 import { generateProof } from '@/lib/proof'
@@ -9,11 +8,10 @@ import SwitchAccountModal from '@/components/SwitchAccountModal'
 import { localTestnet } from '@/config/wagmi'
 import abi from "../../../public/Flexor.json"
 import { FLEXOR_ADDRESS } from '@/lib/utils'
-import type { ProofRequest, SubmitionInputs } from '@/hooks/utils'
 import { useSwitchChain, useAccount, useWriteContract } from 'wagmi'
 import { toHex } from 'viem'
-import Link from 'next/link'
 import { parseEther } from 'ethers'
+import type { ProofRequest, SubmitionInputs } from '@/lib/types'
 
 const TARGET_CHAIN = localTestnet
 
@@ -64,9 +62,9 @@ export default function GeneratePage() {
       setProgress(100)
       setProofGenerated(true)
       setBalanceTarget(values.balance)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Proof generation error:', error)
-      setSubmissionResult(`Proof generation failed: ${error?.message || error}`)
+      setSubmissionResult(`Proof generation failed: ${error instanceof Error ? error.message : String(error)}`)
       setClicked(false)
       setProgress(0)
       setStatus('')
@@ -93,7 +91,7 @@ export default function GeneratePage() {
         toHex(submitionInput.publicInputs),
         submitionInput.chainId,
         submitionInput.blockNumber,
-        submitionInput.flexor_address || "0x0000000000000000000000000000000000000000",
+        submitionInput.flexor_address ?? "0x0000000000000000000000000000000000000000",
         submitionInput.flexor_hl,
         submitionInput.full_message,
       ],

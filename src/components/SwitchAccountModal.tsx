@@ -2,7 +2,6 @@
 
 import { Dialog } from '@headlessui/react'
 import { useState, useEffect } from 'react'
-import { parseEther } from 'viem'
 
 export default function SwitchAccountModal({
   isOpen,
@@ -95,7 +94,7 @@ const tipPresets = [
                 className="bg-blue-500 px-4 py-2 rounded-lg hover:bg-blue-600 w-full"
                 disabled={isSubmitting}
               >
-                I've switched accounts
+                I switched accounts
               </button>
             ) : (
               <div className="space-y-4">

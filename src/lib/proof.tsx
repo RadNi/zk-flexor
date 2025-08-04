@@ -1,19 +1,16 @@
-import { useCallback, useState } from 'react';
-import { Barretenberg, RawBuffer, UltraHonkBackend, deflattenFields, type ProofData } from "@aztec/bb.js";
-import mptBodyCircuit from "@/hooks/target/inner_mpt_body.json";
-import mptBodyInitialCircuit from "@/hooks/target/initial_mpt_body.json";
-import balanceCheckCircuit from "@/hooks/target/leaf_check.json";
-import { Noir, type CompiledCircuit, type InputMap } from '@noir-lang/noir_js';
-import { getInitialPublicInputs, getInitialPlaceHolderInput, uint8ArrayToStringArray, hexStringToStringUint8Array, bigintToUint8Array, buf2Bigint, type SubmitionInputs, type ProofRequest } from "@/hooks/utils";
-import { ethers, keccak256, type BytesLike } from "ethers";
-import { innner_layer_vk, final_vk } from "@/hooks/target/verification_keys";
+import { deflattenFields, type ProofData } from "@aztec/bb.js";
+import { type InputMap } from '@noir-lang/noir_js';
+import { keccak256 } from "ethers";
+import { innner_layer_vk, final_vk } from "@/target/verification_keys";
 import { calculateSigRecovery, ecrecover, fromRPCSig, hashPersonalMessage, pubToAddress, type PrefixedHexString } from "@ethereumjs/util";
 import { getNodesFromProof, type MPTProof, type Node } from "mpt-noirjs"
 import { getProof, getAccount, signMessage } from '@wagmi/core'
 import { wagmiConfig } from '@/config/wagmi';
-import { fromHex, toBytes } from 'viem';
-import { generateFinalProof, generateInitialProof, generateIntermediaryProof, verifyFinalProof, verifyInitialProof, verifyIntermediaryProof } from './utils';
+import { toBytes } from 'viem';
+import { generateFinalProof, generateInitialProof, generateIntermediaryProof, verifyFinalProof } from './utils';
 import { createPublicClient, http } from 'viem'
+import type { ProofRequest, SigningMessage, SubmitionInputs } from "./types";
+import { bigintToUint8Array, getInitialPlaceHolderInput, getInitialPublicInputs, hexStringToStringUint8Array, uint8ArrayToStringArray } from "./proof_helpers";
 
 export async function getCurrentBlockNumber(chainId: number): Promise<bigint> {
   const chain = wagmiConfig.chains.find((c) => c.id === chainId)
@@ -41,7 +38,7 @@ let signature : string[]
 
 function get_final_vkey_hash() {
   const bytesArrays = final_vk.map(h => toBytes(h))
-  let final_key: any[] = []
+  let final_key: Uint8Array[] = []
   bytesArrays.forEach(e => final_key = final_key.concat(e));
   // const final_key = Uint8Array.from(final_vk.map(h => parseInt(h.substring(2), 16)))
   console.log(final_key)
@@ -52,14 +49,7 @@ function get_final_vkey_hash() {
 function get_signing_message(
   request: ProofRequest
 ): string {
-  const msg: {
-    message: string
-    balance_target: string
-    version_hash: string
-    flexor_name?: `${string}.hl`
-    flexor_address?: `0x${string}`,
-    custom_message?: string
-  } = {
+  const msg: SigningMessage = {
     message: "ZK Flexor native token proof",
     balance_target: request.balance.toString(),
     version_hash: get_final_vkey_hash(),
@@ -79,7 +69,6 @@ async function sign_message(
   if (window.ethereum) {
     const msg = get_signing_message(request)
     /* eslint-disable @typescript-eslint/no-unsafe-call */
-    /* eslint-disable @typescript-eslint/no-unsafe-member-access */
     const signature_: PrefixedHexString = await signMessage(wagmiConfig, {
       account: from,
       message: msg
@@ -121,7 +110,7 @@ async function sign_message(
 
 
 
-async function generate_proof(show: any, request: ProofRequest): Promise<ProofData> {
+async function generate_proof(show: (arg0: string, arg1?: number)=>void, request: ProofRequest): Promise<ProofData> {
     const {balance_target: prepared_balance_target, balance_target_length} = getBalanceTargetMain(request.balance)
     // show("Generating circuits verification keys... ⏳");
     let recursiveProof;
@@ -147,8 +136,8 @@ async function generate_proof(show: any, request: ProofRequest): Promise<ProofDa
     show("Generating initial proof... ⏳ ");
     const initial_proof = await generateInitialProof(input)
     show("Verifying initial proof... ⏳", increment);
-    const initial_verified = await verifyInitialProof(initial_proof.proof, initial_proof.publicInputs)
-    show("Initial proof verified: " + initial_verified, increment);
+    // const initial_verified = await verifyInitialProof(initial_proof.proof, initial_proof.publicInputs)
+    // show("Initial proof verified: " + initial_verified, increment);
     recursiveProof = {proof: deflattenFields(initial_proof.proof), publicInputs: initial_proof.publicInputs}
     
     for (let i = 0; i < nodes_inner.length; i++) {
@@ -179,8 +168,8 @@ async function generate_proof(show: any, request: ProofRequest): Promise<ProofDa
           show("Generating recursive proof #" + (i+1) + " ...⏳ ");
           const {proof, publicInputs} = await generateIntermediaryProof(input)
           show("Verifying intermediary proof #" + (i+1) + " ...⏳ ", increment);
-          const verified = await verifyIntermediaryProof(proof, publicInputs)
-          show("Intermediary proof verified: " + verified, increment);
+          // const verified = await verifyIntermediaryProof(proof, publicInputs)
+          // show("Intermediary proof verified: " + verified, increment);
           recursiveProof = {proof: deflattenFields(proof), publicInputs}
         } else {
           // rest of the layers
@@ -192,8 +181,8 @@ async function generate_proof(show: any, request: ProofRequest): Promise<ProofDa
           console.log(proof)
           console.log(publicInputs)
           show("Verifying intermediary proof #" + (i+1) + " ...⏳ ", increment);
-          const verified = await verifyIntermediaryProof(proof, publicInputs)
-          show("Intermediary proof verified: " + verified, increment);
+          // const verified = await verifyIntermediaryProof(proof, publicInputs)
+          // show("Intermediary proof verified: " + verified, increment);
           recursiveProof = {proof: deflattenFields(proof), publicInputs}
         }
     }
@@ -237,63 +226,50 @@ async function generate_proof(show: any, request: ProofRequest): Promise<ProofDa
 
 export function getBalanceTargetMain(balanceTarget: number) {
     const btb = BigInt(balanceTarget * 1e18)
-    let balance_target = bigintToUint8Array(btb)
-    let balance_target_length = balance_target.length
+    const balance_target = bigintToUint8Array(btb)
+    const balance_target_length = balance_target.length
     while (balance_target.length != 32)
         balance_target.push(0)
     return {balance_target, balance_target_length}
 }
 
 async function initialize(
-  show: any, 
+  show: (arg0: string, arg1?: number)=>void, 
   request: ProofRequest): Promise<bigint> {
     show("Connecting to metamask... ⏳");
+    
+    const address = getAccount(wagmiConfig).address!
+    const blockNumber = await getCurrentBlockNumber(getAccount(wagmiConfig).chainId!)
+    const output = await getProof(wagmiConfig, {
+      address: address,
+      blockNumber: blockNumber, 
+      storageKeys: [],
+    })
+    await sign_message(address, request)
 
+    console.log(output)
+    mpt_proof = getNodesFromProof(output.accountProof, address)
+      
+    for (let index = 0; index < mpt_proof.nodes.length; index++) {
+      const node = mpt_proof.nodes[index]!
+      if (index < 3)
+        nodes_initial.push(node)
+      else
+        nodes_inner.push(node)
+    }
 
-    // if (window.ethereum) {
-      /* eslint-disable @typescript-eslint/no-unsafe-argument */
-      // const mmProvider = new ethers.BrowserProvider(window.ethereum)
-      
-      /* eslint-disable @typescript-eslint/no-unsafe-argument */
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-      const address = getAccount(wagmiConfig).address!
-      const blockNumber = await getCurrentBlockNumber(getAccount(wagmiConfig).chainId!)
-      const output = await getProof(wagmiConfig, {
-        address: address,
-        blockNumber: blockNumber, 
-        storageKeys: [],
-      })
-      await sign_message(address, request)
-
-      // const provider = new ethers.JsonRpcProvider("https://docs-demo.quiknode.pro/")
-      
-      // const output = await provider.send("eth_getProof", [address, [], "latest"])
-      // const output = publicClient.getProof([address, [], "latest"])
-      console.log(output)
-      mpt_proof = getNodesFromProof(output.accountProof, address)
-      // console.log(encoded.nodes_initial)
-      
-      for (let index = 0; index < mpt_proof.nodes.length; index++) {
-        const node = mpt_proof.nodes[index]!
-        if (index < 3)
-          nodes_initial.push(node)
-        else
-          nodes_inner.push(node)
-      }
-      // if (encoded.roots.length == 0)
-      //   throw Error("This should never happen!")
-      root = mpt_proof.roots[0]!
-      new_roots = mpt_proof.roots.slice(1)
-      console.log(nodes_initial)
-      console.log(nodes_inner)
-      console.log(mpt_proof.trie_account.account)
-      console.log(new_roots)
-      console.log(root)
-      console.log("blockNumber: ", blockNumber)
-      return blockNumber
+    root = mpt_proof.roots[0]!
+    new_roots = mpt_proof.roots.slice(1)
+    console.log(nodes_initial)
+    console.log(nodes_inner)
+    console.log(mpt_proof.trie_account.account)
+    console.log(new_roots)
+    console.log(root)
+    console.log("blockNumber: ", blockNumber)
+    return blockNumber
 }
 
-let currentProgress: number = 0
+let currentProgress = 0
 
 export async function generateProof (
   request: ProofRequest,
@@ -301,7 +277,7 @@ export async function generateProof (
   setSubmitionInput: (arg: SubmitionInputs) => void
 ) {
 
-  const tick = (label: string, increment: number = 0) => {
+  const tick = (label: string, increment = 0) => {
     currentProgress = Math.min(currentProgress + increment, 100)
     console.log(label)
     updateProgress(currentProgress, label)

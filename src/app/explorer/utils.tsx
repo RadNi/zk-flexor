@@ -1,24 +1,12 @@
 import { hostNetwork, wagmiConfig } from '@/config/wagmi'
+import type { Claim, SigningMessage, VerificationResult } from '@/lib/types'
 import { FLEXOR_ADDRESS, verifyFinalProof } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
 import { readContract } from '@wagmi/core'
 import abi from "public/Flexor.json"
 import { createPublicClient, fromHex, http, toHex } from 'viem'
 
-type VerificationResult = { 
-    status: 'verified' | 'rejected' | 'warning'; 
-    statusMessage: string
-}
 
-type Claim = {
-    proof: `0x${string}`, 
-    publicInputs: `0x${string}`, 
-    full_message: string, 
-    flexor_hl: string, 
-    flexor_address: `0x${string}`, 
-    chainId: bigint, 
-    blockNumber: bigint
-}
 
 // Find chain config by chainId from wagmiConfig.chains
 export function getChainById(chainId: number) {
@@ -56,7 +44,7 @@ export async function fullVerifyProof(claimId: string): Promise<VerificationResu
     const claim = await readClaim(claimId)
     const proof = fromHex(claim.proof, 'bytes')
     const publicInputs = Array.from(fromHex(claim.publicInputs, 'bytes'), (byte) => "0x" + byte.toString(16).padStart(2, '0')) 
-    const fullMessage = JSON.parse(claim.full_message)
+    const fullMessage = JSON.parse(claim.full_message) as SigningMessage
     console.log('Contract result:', fullMessage)
     console.log(claim)
     let name_check = false
@@ -68,12 +56,12 @@ export async function fullVerifyProof(claimId: string): Promise<VerificationResu
     
     // verify hl_name
     if ("flexor_name" in fullMessage)
-        name_check = fullMessage.flexor_name.endsWith(".hl") && (claim.flexor_hl === fullMessage.flexor_name)
+        name_check = fullMessage.flexor_name!.endsWith(".hl") && (claim.flexor_hl === fullMessage.flexor_name)
     else
         name_check = claim.flexor_hl === ""
     // verify address
     if ("flexor_address" in fullMessage)
-        address_check = claim.flexor_address.toLowerCase() === fullMessage.flexor_address.toLowerCase()
+        address_check = claim.flexor_address.toLowerCase() === fullMessage.flexor_address!.toLowerCase()
     else
         address_check = claim.flexor_address === "0x0000000000000000000000000000000000000000"
     // verify stateRoot
@@ -81,12 +69,12 @@ export async function fullVerifyProof(claimId: string): Promise<VerificationResu
 
     let statusMessage = ""
     try {
-        let block = await getBlockByChainId(+claim.chainId.toString(), claim.blockNumber)
+        const block = await getBlockByChainId(+claim.chainId.toString(), claim.blockNumber)
         console.log(block.stateRoot)
         console.log(claim.publicInputs.substring(0, 66))
         stateRoot_check = block.stateRoot === claim.publicInputs.substring(0, 66)
     } catch (err) {
-        statusMessage += (err + " - ")
+        statusMessage += (err instanceof Error ? err.message : String(err)) + ' - '
     }
 
     // balance target

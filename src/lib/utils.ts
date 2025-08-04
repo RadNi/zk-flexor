@@ -1,9 +1,9 @@
 import { Barretenberg, RawBuffer, UltraHonkBackend } from "@aztec/bb.js";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import mptBodyCircuit from "@/hooks/target/inner_mpt_body.json";
-import mptBodyInitialCircuit from "@/hooks/target/initial_mpt_body.json";
-import balanceCheckCircuit from "@/hooks/target/leaf_check.json";
+import mptBodyCircuit from "@/target/inner_mpt_body.json";
+import mptBodyInitialCircuit from "@/target/initial_mpt_body.json";
+import balanceCheckCircuit from "@/target/leaf_check.json";
 import { Noir, type CompiledCircuit, type InputMap } from "@noir-lang/noir_js";
 
 export const FLEXOR_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
@@ -42,7 +42,7 @@ export async function generateInitialProof(inputs: InputMap) {
 }
 
 export async function verifyInitialProof(proof: Uint8Array<ArrayBufferLike>, publicInputs: string[]) {
-    // return await mptBodyInitialBackend.verifyProof({ proof: proof, publicInputs: publicInputs });
+    return await mptBodyInitialBackend.verifyProof({ proof: proof, publicInputs: publicInputs });
 }
 
 export async function generateIntermediaryProof(inputs: InputMap) {
@@ -52,7 +52,7 @@ export async function generateIntermediaryProof(inputs: InputMap) {
 }
 
 export async function verifyIntermediaryProof(proof: Uint8Array<ArrayBufferLike>, publicInputs: string[]) {
-  // return mptBodyBackend.verifyProof({ proof: proof, publicInputs: publicInputs });
+  return mptBodyBackend.verifyProof({ proof: proof, publicInputs: publicInputs });
 }
 
 export async function generateFinalProof(inputs: InputMap) {
