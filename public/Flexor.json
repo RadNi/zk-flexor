@@ -79,6 +79,12 @@
           "internalType": "uint256",
           "name": "balance_target",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "tip",
+          "type": "uint256"
         }
       ],
       "name": "Claim",

@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
-import { Barretenberg, RawBuffer, UltraHonkBackend, deflattenFields } from "@aztec/bb.js";
+import { Barretenberg, RawBuffer, UltraHonkBackend, deflattenFields, type ProofData } from "@aztec/bb.js";
 import mptBodyCircuit from "@/hooks/target/inner_mpt_body.json";
 import mptBodyInitialCircuit from "@/hooks/target/initial_mpt_body.json";
 import balanceCheckCircuit from "@/hooks/target/leaf_check.json";
 import { Noir, type CompiledCircuit, type InputMap } from '@noir-lang/noir_js';
-import { getInitialPublicInputs, getInitialPlaceHolderInput, uint8ArrayToStringArray, hexStringToStringUint8Array, bigintToUint8Array, buf2Bigint, type SubmitionInputs } from "@/hooks/utils";
+import { getInitialPublicInputs, getInitialPlaceHolderInput, uint8ArrayToStringArray, hexStringToStringUint8Array, bigintToUint8Array, buf2Bigint, type SubmitionInputs, type ProofRequest } from "@/hooks/utils";
 import { ethers, keccak256, type BytesLike } from "ethers";
 import { innner_layer_vk, final_vk } from "@/hooks/target/verification_keys";
 import { calculateSigRecovery, ecrecover, fromRPCSig, hashPersonalMessage, pubToAddress, type PrefixedHexString } from "@ethereumjs/util";
@@ -50,35 +50,34 @@ function get_final_vkey_hash() {
 }
 
 function get_signing_message(
-  balance_target: number,
-  flexor_name?: `${string}.hl`,
-  flexor_address?: `0x${string}`
+  request: ProofRequest
 ): string {
   const msg: {
     message: string
     balance_target: string
     version_hash: string
     flexor_name?: `${string}.hl`
-    flexor_address?: `0x${string}`
+    flexor_address?: `0x${string}`,
+    custom_message?: string
   } = {
     message: "ZK Flexor native token proof",
-    balance_target: balance_target.toString(),
+    balance_target: request.balance.toString(),
     version_hash: get_final_vkey_hash(),
   }
 
-  if (flexor_name) msg.flexor_name = flexor_name
-  if (flexor_address) msg.flexor_address = flexor_address
+  if (request.name) msg.flexor_name = request.name
+  if (request.address) msg.flexor_address = request.address
+  if (request.message) msg.custom_message = request.message
 
   return JSON.stringify(msg, null, 2)
 }
 
-async function sign_message(from: `0x${string}`, 
-  balance_target: number,
-  flexor_name?: `${string}.hl`,
-  flexor_address?: `0x${string}`
+async function sign_message(
+  from: `0x${string}`, 
+  request: ProofRequest
 ) {
   if (window.ethereum) {
-    const msg = get_signing_message(balance_target, flexor_name, flexor_address)
+    const msg = get_signing_message(request)
     /* eslint-disable @typescript-eslint/no-unsafe-call */
     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
     const signature_: PrefixedHexString = await signMessage(wagmiConfig, {
@@ -122,8 +121,8 @@ async function sign_message(from: `0x${string}`,
 
 
 
-async function generate_proof(show: any, balance_target: string) {
-    const {balance_target: prepared_balance_target, balance_target_length} = getBalanceTargetMain(balance_target)
+async function generate_proof(show: any, request: ProofRequest): Promise<ProofData> {
+    const {balance_target: prepared_balance_target, balance_target_length} = getBalanceTargetMain(request.balance)
     // show("Generating circuits verification keys... ⏳");
     let recursiveProof;
     let input;
@@ -236,8 +235,8 @@ async function generate_proof(show: any, balance_target: string) {
 }
 
 
-export function getBalanceTargetMain(balanceTarget: string) {
-    const btb = BigInt(Number(balanceTarget) * 1e18)
+export function getBalanceTargetMain(balanceTarget: number) {
+    const btb = BigInt(balanceTarget * 1e18)
     let balance_target = bigintToUint8Array(btb)
     let balance_target_length = balance_target.length
     while (balance_target.length != 32)
@@ -247,9 +246,7 @@ export function getBalanceTargetMain(balanceTarget: string) {
 
 async function initialize(
   show: any, 
-  balance_target: number, 
-  flexor_name?: `${string}.hl`,
-  flexor_address?: `0x${string}`): Promise<bigint> {
+  request: ProofRequest): Promise<bigint> {
     show("Connecting to metamask... ⏳");
 
 
@@ -266,7 +263,7 @@ async function initialize(
         blockNumber: blockNumber, 
         storageKeys: [],
       })
-      await sign_message(address, balance_target, flexor_name, flexor_address)
+      await sign_message(address, request)
 
       // const provider = new ethers.JsonRpcProvider("https://docs-demo.quiknode.pro/")
       
@@ -299,7 +296,7 @@ async function initialize(
 let currentProgress: number = 0
 
 export async function generateProof (
-  requestInputs: any,
+  request: ProofRequest,
   updateProgress: (step: number, label: string) => void,
   setSubmitionInput: (arg: SubmitionInputs) => void
 ) {
@@ -311,26 +308,31 @@ export async function generateProof (
   }
 
 
-  console.log(requestInputs.balance)
-  // setBalanceTargetMain(balanceTarget.balance)
-  const blockNumber = await initialize(tick, requestInputs.balance, "sag.hl", "0x123456789abcdef6789a123456789abcdef6789a")
-  // console.time("prover")
-  // setGeneratingProof(true)
+  console.log(request.balance)
+  const blockNumber = await initialize(tick, request)
   console.log("generating proof")
-  const {proof, publicInputs} = await generate_proof(tick, requestInputs.balance)
+  const {proof, publicInputs} = await generate_proof(tick, request)
+  // const proof = Uint8Array.from(Array(16224).fill([10]).flat())
+  // const publicInputs = Array(97).fill([`0x${10}`]).flat()
   const submitionInput: SubmitionInputs = {
     proof: proof,
     publicInputs: Uint8Array.from(publicInputs.map(x => Number(x))),
     blockNumber: blockNumber,
-    flexor_address: "0x123456789abcdef6789a123456789abcdef6789a",
-    flexor_hl: "sag.hl",
+    flexor_address: request.address,
+    flexor_hl: request.name,
     chainId: getAccount(wagmiConfig).chainId!,
-    full_message: get_signing_message(requestInputs.balance, "sag.hl", "0x123456789abcdef6789a123456789abcdef6789a"),
-    tip: (10n**17n)*3n
+    full_message: get_signing_message(request),
+    tip: (10n**17n)*3n,
+    custom_message: request.message
   }
-  // fakeSubmitInputs.chainId = getAccount(wagmiConfig).chainId!
-  // fakeSubmitInputs.blockNumber = await getCurrentBlockNumber(getAccount(wagmiConfig).chainId!)
-  // console.log(getAccount(wagmiConfig).chainId)
+  // if (requestInputs.address)
+  //   submitionInput.flexor_address = requestInputs.address
+  // if (requestInputs.name)
+  //   submitionInput.flexor_hl = requestInputs.name
+  // if (requestInputs.message)
+  //   submitionInput.custom_message = requestInputs.message
+
+
   // tick("Fake proof generation!", 100)
   console.log(submitionInput)
   setSubmitionInput(submitionInput)

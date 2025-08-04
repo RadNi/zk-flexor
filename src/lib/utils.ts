@@ -42,7 +42,7 @@ export async function generateInitialProof(inputs: InputMap) {
 }
 
 export async function verifyInitialProof(proof: Uint8Array<ArrayBufferLike>, publicInputs: string[]) {
-    return await mptBodyInitialBackend.verifyProof({ proof: proof, publicInputs: publicInputs });
+    // return await mptBodyInitialBackend.verifyProof({ proof: proof, publicInputs: publicInputs });
 }
 
 export async function generateIntermediaryProof(inputs: InputMap) {
@@ -52,7 +52,7 @@ export async function generateIntermediaryProof(inputs: InputMap) {
 }
 
 export async function verifyIntermediaryProof(proof: Uint8Array<ArrayBufferLike>, publicInputs: string[]) {
-  return mptBodyBackend.verifyProof({ proof: proof, publicInputs: publicInputs });
+  // return mptBodyBackend.verifyProof({ proof: proof, publicInputs: publicInputs });
 }
 
 export async function generateFinalProof(inputs: InputMap) {

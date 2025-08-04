@@ -41,6 +41,7 @@ const hyperliquidTestnet = {
   testnet: true,
 } as const satisfies Chain;
 
+
 export const hyperliquidMainnet = {
   id: 999,
   name: 'Hyperliquid Mainnet',
@@ -59,6 +60,9 @@ export const hyperliquidMainnet = {
   },
   testnet: false,
 } as const satisfies Chain;
+
+
+export const hostNetwork = localTestnet
 
 
 export const wagmiConfig = getDefaultConfig({

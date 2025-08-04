@@ -2,17 +2,10 @@
 
 import { useContext, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ExplorerCacheContext } from './layout'
 import { shortenHash } from '@/hooks/utils'
-import abi from '../../../public/Flexor.json'
-import { fromHex, toHex } from 'viem'
-import { wagmiConfig } from '@/config/wagmi'
-import { FLEXOR_ADDRESS, verifyFinalProof } from '@/lib/utils'
-import { readContract } from '@wagmi/core'
-import { createPublicClient, http } from 'viem'
-import { hashPersonalMessage } from '@ethereumjs/util'
 import { ethers } from 'ethers'
-import { fullVerifyProof } from './utils'
+import { fullVerifyProof, getChainById } from './utils'
+import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
 
 const ITEMS_PER_PAGE = 10
 
@@ -106,10 +99,11 @@ export default function ExplorerPage() {
         <>
             {/* Header Row */}
             <div className="hidden md:flex justify-between px-4 py-2 bg-gray-800 rounded text-sm text-gray-400 font-semibold">
-                <div className="w-1/5">Name</div>
+                <div className="w-1/6">Name</div>
                 <div className="w-1/5">Tx Hash</div>
                 <div className="w-1/5">Address</div>
                 <div className="w-1/6">Balance Target</div>
+                <div className="w-1/6">Tip</div>
                 <div className="w-1/6">Chain ID</div>
                 <div className="w-1/6">Status</div>
             </div>
@@ -118,12 +112,29 @@ export default function ExplorerPage() {
             {paginatedItems.map((item) => (
                 <Link key={item.txHash} href={`/explorer/${item.id}`}>
                 <div className="p-4 bg-gray-900 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-gray-800 transition cursor-pointer space-y-2 md:space-y-0 md:space-x-6">
-                    <div className="w-full md:w-1/5 font-semibold whitespace-nowrap truncate">{item.name}</div>
-                    <div className="w-full md:w-1/5 text-sm text-gray-400 whitespace-nowrap truncate">{shortenHash(item.txHash)}</div>
-                    <div className="w-full md:w-1/5 text-sm text-gray-400 whitespace-nowrap truncate">{shortenHash(item.address)}</div>
-                    <div className="w-full md:w-1/6 text-sm text-gray-400 whitespace-nowrap truncate">{ethers.formatEther(item.balance_target)}
-                    {/* {item.balance_target ? `${(item.balance_target / 10n**18n).toFixed(4)} ETH` : '—'} */}
+                    <div className="w-full md:w-1/6 font-semibold whitespace-nowrap truncate">
+                        <div
+  onClick={(e) => {
+    e.stopPropagation();
+    window.open(`https://app.hlnames.xyz/name/${item.name}`, "_blank");
+  }}
+      className="text-white font-semibold hover:text-blue-400 cursor-pointer transition-colors px-1 py-0.5 rounded"
+>
+  {item.name}
+</div>
+
+
+
                     </div>
+
+                    
+
+                    <div className="w-full md:w-1/5 text-sm text-gray-400 whitespace-nowrap truncate">{shortenHash(item.txHash)}</div>
+                    <div className="w-full md:w-1/5 text-sm text-gray-400 whitespace-nowrap truncate">{item.address && item.address !== '0x0000000000000000000000000000000000000000'? shortenHash(item.address): ''}</div>
+                    <div className="w-full md:w-1/6 text-sm text-gray-400 whitespace-nowrap truncate">{ethers.formatEther(item.balance_target) + " " + getChainById(Number(item.chainId))?.nativeCurrency.symbol}</div>
+                    <div className="w-full md:w-1/6 text-sm text-gray-400 whitespace-nowrap truncate">{ethers.formatEther(item.tip)}</div>
+                    {/* {item.balance_target ? `${(item.balance_target / 10n**18n).toFixed(4)} ETH` : '—'} */}
+                    {/* </div> */}
                     <div className="w-full md:w-1/6 text-sm text-gray-500 whitespace-nowrap">{item.chainId}</div>
 
                     <div className="w-full md:w-1/6 relative group text-sm whitespace-nowrap">
@@ -157,7 +168,7 @@ export default function ExplorerPage() {
                         </button>
                     )}
                     {['verified', 'rejected', 'warning'].includes(item.status!) && item.statusMessage && (
-                        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-3 py-2 rounded shadow-lg z-10 w-max opacity-0 group-hover:opacity-100 transition-opacity max-w-xs break-words">
+                        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-3 py-2 rounded shadow-lg z-10 max-w-sm w-fit break-words whitespace-normal opacity-0 group-hover:opacity-100 transition-opacity">
                             {item.statusMessage}
                         </div>
                     )}

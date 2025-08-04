@@ -79,10 +79,18 @@ export type SubmitionInputs = {
   publicInputs: Uint8Array<ArrayBufferLike>
   chainId: number,
   blockNumber: bigint,
-  flexor_address: `0x${string}`,
-  flexor_hl: `${string}.hl`,
+  flexor_address?: `0x${string}`,
+  flexor_hl?: `${string}.hl`,
   full_message: string,
   tip: bigint
+  custom_message?: string
+}
+
+export type ProofRequest = {
+  address?: `0x${string}`,
+  name?: `${string}.hl`,
+  message?: string,
+  balance: number
 }
 
 export function shortenHash(hash: string, chars = 6) {

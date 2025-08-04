@@ -3,10 +3,11 @@
 import React, { createContext, useState, useEffect, useRef, useMemo } from 'react'
 import { ethers } from 'ethers'
 import { useAccount, useWatchContractEvent, useClient, type Config } from 'wagmi'
-import { wagmiConfig } from '@/config/wagmi' // your config
 import abi from "../../../public/Flexor.json"
 import { FLEXOR_ADDRESS } from '@/lib/utils'
-import { fromHex, toHex } from 'viem'
+import { toHex } from 'viem'
+import { hostNetwork, hyperliquidMainnet, localTestnet, wagmiConfig } from '@/config/wagmi'
+import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
 
 export type ExplorerItem = {
   id: string
@@ -17,25 +18,20 @@ export type ExplorerItem = {
   chainId: string
   status?: 'verified' | 'rejected' | 'warning'
   message?: string
-  statusMessage?: string
+  statusMessage?: string,
+  tip: string
 }
 
-export const ExplorerCacheContext = createContext<{
-  items: ExplorerItem[]
-  setItems: React.Dispatch<React.SetStateAction<ExplorerItem[]>>
-}>({
-  items: [],
-  setItems: () => {},
-})
 
-export default function ExplorerLayout({ children }) {
+
+export default function ExplorerLayout({ children }: { children: React.ReactNode }) {
   const account = useAccount()
     const client = useClient<Config>({ chainId: account.chainId })
     const provider = useMemo(() => {
-    return client ? new ethers.JsonRpcProvider(client.transport.url) : null
+    return client ? new ethers.JsonRpcProvider(hostNetwork.rpcUrls.default.http[0]) : null
     }, [client])
 
-  const [items, setItems] = useState([]) // all cached items
+  const [items, setItems] = useState<ExplorerItem[]>([]);
   const txHashSet = useRef(new Set())
 
   // Utility: convert bytes32 txHash to hex string
@@ -63,18 +59,19 @@ export default function ExplorerLayout({ children }) {
 
         const pastItems = pastEvents.map((event) => {
             console.log(event)
-            const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256"], event.data)
+            const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.data)
             console.log(data[2])
           return {
             id: data[0],
             address: ethers.AbiCoder.defaultAbiCoder().decode(["address"], event.topics[1]!).toString(),
             name: data[1],
             txHash: event.transactionHash,
-            chainId: BigInt(event.topics[3]!),
+            chainId: BigInt(event.topics[3]!).toString(),
             balance_target: data[2],
-            message: "sag is here",
+            // message: "",
             blockNumber: event.blockNumber,
             timestamp: event.blockNumber, // could add real timestamp if needed
+            tip: data[3]
           }
         }).reverse()
 
@@ -100,35 +97,42 @@ export default function ExplorerLayout({ children }) {
   useWatchContractEvent({
     address: FLEXOR_ADDRESS,
     abi: abi,
-    eventName: 'ProofSubmitted',
-    listener(log) {
+    eventName: 'Claim',
+    chainId: hostNetwork.id,
+    onLogs(logs) {
       // log is the parsed event args
-      const { id, address, name, txHash, chainId, message, balance_target } = log
-      const txHashStr = toHex(txHash)
+      console.log(logs)
+      logs.map(log => {
+      const { transactionHash } = log
       console.log("inja", log)
 
       // Add new unique event at the **front** of list
+      if ("args" in log) {
+        console.log(log.args)
+        const args = log.args as {index: bigint, user: string, hl_name: string, chainId: bigint, balance_target: bigint, tip: bigint}
       setItems((prev) => {
-        if (txHashSet.current.has(txHashStr)) return prev
-
-        txHashSet.current.add(txHashStr)
+        // Use Set directly from `prev` items instead of mutable ref
+        const existingTxs = new Set(prev.map((item) => item.txHash))
+        if (existingTxs.has(transactionHash!)) return prev
 
         return [
           {
-            id: id.toNumber(),
-            address,
-            name,
-            txHash: txHashStr,
-            chainId: chainId.toNumber(),
-            balance_target: balance_target,
-            message,
-            blockNumber: null, // realtime event may not have blockNumber yet
+            id: args.index.toString(),
+            address: args.user,
+            name: args.hl_name,
+            txHash: transactionHash!,
+            chainId: args.chainId.toString(),
+            balance_target: args.balance_target.toString(),
+            message: "",
+            blockNumber: null,
             timestamp: Date.now(),
+            tip: args.tip.toString(),
           },
           ...prev,
         ].slice(0, 1000)
       })
-    },
+    }
+    })},
   })
 
   return (

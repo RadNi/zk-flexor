@@ -1,14 +1,49 @@
 export default function HomePage() {
   return (
-    <main className="h-screen flex flex-col items-center justify-center bg-black text-white">
-      <h1 className="text-5xl font-bold mb-6">ZK Native Balance Proof</h1>
-      <p className="text-gray-400 mb-10">Prove your balance privately</p>
-      <a
-        href="/generate"
-        className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition"
-      >
-        Generate Proof
-      </a>
+    <main className="h-screen flex flex-col items-center justify-center bg-gradient-to-b from-black via-gray-900 to-black text-white px-4 text-center">
+      <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+        Zero-Knowledge Balance Proof
+      </h1>
+      <p className="text-gray-400 text-lg md:text-xl max-w-xl mb-6">
+        Prove your native-token balance in any EVM chain without revealing it, and submit the proofs on Hyperliquid — private, and secure using Zero-knowledge proofs.
+      </p>
+      <p className="text-gray-300 text-md md:text-lg max-w-lg mb-10">
+        Protect your on-chain privacy while freely flexing..
+      </p>
+      <div className="flex flex-col sm:flex-row gap-4 mb-12">
+        <a
+          href="/generate"
+          className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition shadow"
+        >
+          Generate Proof
+        </a>
+        <a
+          href="/explorer"
+          className="px-8 py-4 border border-white text-white font-semibold rounded-xl hover:bg-white hover:text-black transition shadow"
+        >
+          View Explorer
+        </a>
+      </div>
+      <p className="text-gray-400 text-lg tracking-wide font-semibold select-none">
+        Powered by{' '}
+        <a
+          href="https://noir-lang.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-blue-400 transition"
+        >
+          Noir
+        </a>{' '}
+        and{' '}
+        <a
+          href="https://hyperliquid.xyz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-blue-400 transition"
+        >
+          Hyperliquid
+        </a>
+      </p>
     </main>
-  );
+  )
 }

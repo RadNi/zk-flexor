@@ -1,4 +1,4 @@
-import { wagmiConfig } from '@/config/wagmi'
+import { hostNetwork, wagmiConfig } from '@/config/wagmi'
 import { FLEXOR_ADDRESS, verifyFinalProof } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
 import { readContract } from '@wagmi/core'
@@ -7,11 +7,21 @@ import { createPublicClient, fromHex, http, toHex } from 'viem'
 
 type VerificationResult = { 
     status: 'verified' | 'rejected' | 'warning'; 
-    statusMessage: string 
+    statusMessage: string
+}
+
+type Claim = {
+    proof: `0x${string}`, 
+    publicInputs: `0x${string}`, 
+    full_message: string, 
+    flexor_hl: string, 
+    flexor_address: `0x${string}`, 
+    chainId: bigint, 
+    blockNumber: bigint
 }
 
 // Find chain config by chainId from wagmiConfig.chains
-function getChainById(chainId: number) {
+export function getChainById(chainId: number) {
   return wagmiConfig.chains.find((chain) => chain.id === chainId)
 }
 
@@ -31,20 +41,24 @@ async function getBlockByChainId(chainId: number, blockNumber: bigint ) {
   return block
 }
 
-export async function fullVerifyProof(claimId: string): Promise<VerificationResult> {
-    const result = await readContract(wagmiConfig, {
+
+export async function readClaim(claimId: string): Promise<Claim> {
+    return await readContract(wagmiConfig, {
+        chainId: hostNetwork.id,
         abi,
         address: FLEXOR_ADDRESS,
         functionName: 'getClaim',
         args: [claimId],
-    }) as {
-        proof: `0x${string}`, publicInputs: `0x${string}`, full_message: string, flexor_hl: string, flexor_address: `0x${string}`, chainId: bigint, blockNumber: bigint
-    }
-    const proof = fromHex(result.proof, 'bytes')
-    const publicInputs = Array.from(fromHex(result.publicInputs, 'bytes'), (byte) => "0x" + byte.toString(16).padStart(2, '0')) 
-    const full_message = JSON.parse(result.full_message)
-    console.log('Contract result:', full_message)
-    console.log(result)
+    }) as Claim
+}
+
+export async function fullVerifyProof(claimId: string): Promise<VerificationResult> {
+    const claim = await readClaim(claimId)
+    const proof = fromHex(claim.proof, 'bytes')
+    const publicInputs = Array.from(fromHex(claim.publicInputs, 'bytes'), (byte) => "0x" + byte.toString(16).padStart(2, '0')) 
+    const fullMessage = JSON.parse(claim.full_message)
+    console.log('Contract result:', fullMessage)
+    console.log(claim)
     let name_check = false
     let verification_check = false
     let stateRoot_check = false
@@ -53,37 +67,37 @@ export async function fullVerifyProof(claimId: string): Promise<VerificationResu
     let message_hash_check = false
     
     // verify hl_name
-    if ("flexor_name" in full_message)
-        name_check = full_message.flexor_name.endsWith(".hl") && (result.flexor_hl === full_message.flexor_name)
+    if ("flexor_name" in fullMessage)
+        name_check = fullMessage.flexor_name.endsWith(".hl") && (claim.flexor_hl === fullMessage.flexor_name)
     else
-        name_check = result.flexor_hl === ""
+        name_check = claim.flexor_hl === ""
     // verify address
-    if ("flexor_address" in full_message)
-        address_check = result.flexor_address.toLowerCase() === full_message.flexor_address.toLowerCase()
+    if ("flexor_address" in fullMessage)
+        address_check = claim.flexor_address.toLowerCase() === fullMessage.flexor_address.toLowerCase()
     else
-        address_check = result.flexor_address === "0x0000000000000000000000000000000000000000"
+        address_check = claim.flexor_address === "0x0000000000000000000000000000000000000000"
     // verify stateRoot
     stateRoot_check = false
 
     let statusMessage = ""
     try {
-        let block = await getBlockByChainId(+result.chainId.toString(), result.blockNumber)
+        let block = await getBlockByChainId(+claim.chainId.toString(), claim.blockNumber)
         console.log(block.stateRoot)
-        console.log(result.publicInputs.substring(0, 66))
-        stateRoot_check = block.stateRoot === result.publicInputs.substring(0, 66)
+        console.log(claim.publicInputs.substring(0, 66))
+        stateRoot_check = block.stateRoot === claim.publicInputs.substring(0, 66)
     } catch (err) {
         statusMessage += (err + " - ")
     }
 
     // balance target
     const balance_target_length = +BigInt(publicInputs[96]!).toString()
-    const balance_target = BigInt("0x" + result.publicInputs.substring(2 + 32*4, 2 + 32 * 4 + balance_target_length * 2))
-    balance_target_check = Math.floor(parseFloat(full_message.balance_target) * 1e18).toString() === balance_target.toString()
+    const balance_target = BigInt("0x" + claim.publicInputs.substring(2 + 32*4, 2 + 32 * 4 + balance_target_length * 2))
+    balance_target_check = Math.floor(parseFloat(fullMessage.balance_target) * 1e18).toString() === balance_target.toString()
 
     // message hash
-    const msgBuf = Buffer.from(result.full_message)
+    const msgBuf = Buffer.from(claim.full_message)
     const hashed_message = hashPersonalMessage(msgBuf)
-    message_hash_check = toHex(hashed_message) === "0x" + result.publicInputs.substring(2 + 32*2, 2 + 32*4)
+    message_hash_check = toHex(hashed_message) === "0x" + claim.publicInputs.substring(2 + 32*2, 2 + 32*4)
 
     // verify proof
     verification_check = await verifyFinalProof(proof, publicInputs)
@@ -114,7 +128,7 @@ export async function fullVerifyProof(claimId: string): Promise<VerificationResu
             status = 'verified'
             statusMessage = 'Proof is verified'
         }
-        else if (result.chainId === 999n) {
+        else if (claim.chainId === 999n) {
             statusMessage = 'Hyperliquid RPCs are broken to verify state root!'
             status = 'warning'
         }
