@@ -13,7 +13,6 @@ export type VerificationResult = {
 }
 
 export type Claim = {
-    proof: `0x${string}`, 
     publicInputs: `0x${string}`, 
     full_message: string, 
     flexor_hl: string, 

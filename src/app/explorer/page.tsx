@@ -30,7 +30,7 @@ export default function ExplorerPage() {
     if (page > totalPages) setPage(1)
   }, [page, totalPages])
 
-  const verifyProof = async (claimId: string) => {
+  const verifyProof = async (claimId: string, txHash: string) => {
   console.log("Start verifying:", claimId)
 
   // Add to verifying set
@@ -42,7 +42,7 @@ export default function ExplorerPage() {
 
   try {
     // Await if fullVerifyProof is async
-    const outcome = await fullVerifyProof(claimId)
+    const outcome = await fullVerifyProof(claimId, txHash)
 
     setItems((prev) =>
       prev.map((item) =>
@@ -160,7 +160,7 @@ export default function ExplorerPage() {
                         <button
                         onClick={(e) => {
                             e.preventDefault()
-                            verifyProof(item.id).catch(e => console.log("Proof verification faild: " + e))
+                            verifyProof(item.id, item.txHash).catch(e => console.log("Proof verification faild: " + e))
                         }}
                         className="bg-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-700 transition font-medium shadow"
                         >

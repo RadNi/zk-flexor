@@ -5,15 +5,13 @@ import Inputs from '@/components/Inputs'
 import ProgressBar from '@/components/ProgressBar'
 import { generateProof } from '@/lib/proof'
 import SwitchAccountModal from '@/components/SwitchAccountModal'
-import { localTestnet } from '@/config/wagmi'
+import { hostNetwork, localTestnet } from '@/config/wagmi'
 import abi from "../../../public/Flexor.json"
 import { FLEXOR_ADDRESS } from '@/lib/utils'
 import { useSwitchChain, useAccount, useWriteContract } from 'wagmi'
 import { toHex } from 'viem'
 import { parseEther } from 'ethers'
 import type { ProofRequest, SubmitionInputs } from '@/lib/types'
-
-const TARGET_CHAIN = localTestnet
 
 export default function GeneratePage() {
   const [status, setStatus] = useState('')
@@ -77,8 +75,8 @@ export default function GeneratePage() {
 
   const handleActualProofSubmission = async (tip: string) => {
     console.log('Submitting proof on-chain...')
-    if (chainId !== TARGET_CHAIN.id) {
-      await switchChainAsync({ chainId: TARGET_CHAIN.id })
+    if (chainId !== hostNetwork.id) {
+      await switchChainAsync({ chainId: hostNetwork.id })
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
 
@@ -96,7 +94,7 @@ export default function GeneratePage() {
         submitionInput.full_message,
       ],
       value: parseEther(tip),
-      chainId: TARGET_CHAIN.id,
+      chainId: hostNetwork.id,
     })
     console.log(tx)
   }

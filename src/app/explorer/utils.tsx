@@ -2,7 +2,7 @@ import { hostNetwork, wagmiConfig } from '@/config/wagmi'
 import type { Claim, SigningMessage, VerificationResult } from '@/lib/types'
 import { FLEXOR_ADDRESS, verifyFinalProof } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
-import { getProof, readContract } from '@wagmi/core'
+import { getProof, getTransaction, readContract } from '@wagmi/core'
 import { keccak256 } from 'ethers'
 import abi from "public/Flexor.json"
 import { createPublicClient, fromHex, http, toHex } from 'viem'
@@ -90,11 +90,13 @@ export async function readClaim(claimId: string): Promise<Claim> {
     return x as Claim
 }
 
-export async function fullVerifyProof(claimId: string): Promise<VerificationResult> {
+export async function fullVerifyProof(claimId: string, txHash: string): Promise<VerificationResult> {
     const claim = await readClaim(claimId)
     console.log(claim)
-    let totalProof: `0x${string}` = "0x"
-    claim.proof.forEach(p => totalProof = totalProof.concat(p.substring(2)) as `0x${string}`)
+    const trx = await getTransaction(wagmiConfig, {hash: txHash as `0x${string}`})
+    const proofPart = trx.input.substring(522, 32448 + 522)
+    let totalProof: `0x${string}` = `0x${proofPart}`
+    console.log(totalProof)
     const proof = fromHex(totalProof, 'bytes')
     const publicInputs = Array.from(fromHex(claim.publicInputs, 'bytes'), (byte) => "0x" + byte.toString(16).padStart(2, '0')) 
     console.log(claim.full_message)

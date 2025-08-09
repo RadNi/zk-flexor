@@ -46,9 +46,9 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
 
         // Query past events - adjust fromBlock as needed (e.g., deployment block)
         let pastEvents: (ethers.Log | ethers.EventLog)[] = []
-        let fromBlock = (await getLastBlockByChainId(hostNetwork.id)).number - 1000n
-        let toBlock: 'latest' | bigint = 'latest'
-        for (let index = 0; index < 100; index++) {
+        let fromBlock = Math.max(Number((await getLastBlockByChainId(hostNetwork.id)).number) - 1000, 0)
+        let toBlock: 'latest' | number = 'latest'
+        for (let index = 0; index < 100 && fromBlock >= 0; index++) {
           console.log("here", index)
           pastEvents = pastEvents.concat(await contract.queryFilter("Claim", fromBlock, toBlock))
 
@@ -76,7 +76,7 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
           })
 
           toBlock = fromBlock
-          fromBlock = toBlock - 1000n
+          fromBlock = toBlock - 1000
         }
 
         console.log("Arrived")

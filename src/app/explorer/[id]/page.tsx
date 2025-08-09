@@ -50,10 +50,10 @@ export default function ExplorerDetailPage() {
     }, [id, setItems])
 
 
-  const verifyProof = async (claimId: string) => {
+  const verifyProof = async (claimId: string, txHash: string) => {
     setVerifying(true)
     try {
-      const result = await fullVerifyProof(claimId)
+      const result = await fullVerifyProof(claimId, txHash)
       setItems((prev) => {
         const exists = prev.some((itm) => itm.id.toString() === claimId)
         if (!exists && item) return [...prev, { ...item, ...result }]
@@ -124,7 +124,7 @@ export default function ExplorerDetailPage() {
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <button
-                onClick={() => verifyProof(item.id.toString())}
+                onClick={() => verifyProof(item.id.toString(), item.txHash)}
                 className="bg-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-700 transition font-medium shadow"
               >
                 Verify Proof
