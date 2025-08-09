@@ -93,7 +93,7 @@ export async function readClaim(claimId: string): Promise<Claim> {
 export async function fullVerifyProof(claimId: string, txHash: string): Promise<VerificationResult> {
     const claim = await readClaim(claimId)
     console.log(claim)
-    const trx = await getTransaction(wagmiConfig, {hash: txHash as `0x${string}`})
+    const trx = await getTransaction(wagmiConfig, {hash: txHash as `0x${string}`, chainId: hostNetwork.id})
     const proofPart = trx.input.substring(522, 32448 + 522)
     const totalProof: `0x${string}` = `0x${proofPart}`
     console.log(totalProof)
@@ -126,14 +126,11 @@ export async function fullVerifyProof(claimId: string, txHash: string): Promise<
     let statusMessage = ""
     try {
         if (claim.chainId === 999n) {
-            console.log("Sag san")
             const stateRoot = await getStateRootByChainId(Number(claim.chainId), claim.blockNumber)
             stateRoot_check = stateRoot === claim.publicInputs.substring(0, 66)
-            console.log("miad?")
             console.log(stateRoot)
             console.log(claim.publicInputs.substring(0, 66))
         } else {
-            console.log("miad2?")
             const block = await getBlockByChainId(+claim.chainId.toString(), claim.blockNumber)
             console.log(block.stateRoot)
             console.log(claim.publicInputs.substring(0, 66))

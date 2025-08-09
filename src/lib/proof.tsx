@@ -68,6 +68,8 @@ async function sign_message(
 ) {
   if (window.ethereum) {
     const msg = get_signing_message(request)
+    console.log("msg before signing")
+    console.log(msg)
     const signature_: PrefixedHexString = await signMessage(wagmiConfig, {
       account: from,
       message: msg
@@ -76,8 +78,6 @@ async function sign_message(
     //     method: "personal_sign",
     //     params: [msg, from],
     // }) as PrefixedHexString
-    console.log("msg before signing")
-    console.log(msg)
     const msgBuf = Buffer.from(msg)
     const {r, s, v} = fromRPCSig(signature_)
     const hashed_message_ = hashPersonalMessage(msgBuf)
