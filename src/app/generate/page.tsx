@@ -5,7 +5,7 @@ import Inputs from '@/components/Inputs'
 import ProgressBar from '@/components/ProgressBar'
 import { generateProof } from '@/lib/proof'
 import SwitchAccountModal from '@/components/SwitchAccountModal'
-import { hostNetwork, localTestnet } from '@/config/wagmi'
+import { hostNetwork } from '@/config/wagmi'
 import abi from "../../../public/Flexor.json"
 import { FLEXOR_ADDRESS } from '@/lib/utils'
 import { useSwitchChain, useAccount, useWriteContract } from 'wagmi'

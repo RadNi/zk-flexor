@@ -68,7 +68,6 @@ async function sign_message(
 ) {
   if (window.ethereum) {
     const msg = get_signing_message(request)
-    /* eslint-disable @typescript-eslint/no-unsafe-call */
     const signature_: PrefixedHexString = await signMessage(wagmiConfig, {
       account: from,
       message: msg

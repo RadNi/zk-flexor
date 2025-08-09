@@ -2,11 +2,11 @@ import { hostNetwork, wagmiConfig } from '@/config/wagmi'
 import type { Claim, SigningMessage, VerificationResult } from '@/lib/types'
 import { FLEXOR_ADDRESS, verifyFinalProof } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
-import { getProof, getTransaction, readContract } from '@wagmi/core'
+import { getTransaction, readContract } from '@wagmi/core'
 import { keccak256 } from 'ethers'
 import abi from "public/Flexor.json"
 import { createPublicClient, fromHex, http, toHex } from 'viem'
-import { getTransactionReceipt, waitForTransactionReceipt } from 'viem/actions'
+import { waitForTransactionReceipt } from 'viem/actions'
 
 export const PROOF_CHUNK_NUMBER = 1;
 export const CHUNK_SIZE = 16000;
@@ -79,7 +79,7 @@ async function getStateRootByChainId(chainId: number, blockNumber: bigint ) {
 
 
 export async function readClaim(claimId: string): Promise<Claim> {
-    let x = await readContract(wagmiConfig, {
+    const x = await readContract(wagmiConfig, {
         chainId: hostNetwork.id,
         abi,
         address: FLEXOR_ADDRESS,
@@ -95,7 +95,7 @@ export async function fullVerifyProof(claimId: string, txHash: string): Promise<
     console.log(claim)
     const trx = await getTransaction(wagmiConfig, {hash: txHash as `0x${string}`})
     const proofPart = trx.input.substring(522, 32448 + 522)
-    let totalProof: `0x${string}` = `0x${proofPart}`
+    const totalProof: `0x${string}` = `0x${proofPart}`
     console.log(totalProof)
     const proof = fromHex(totalProof, 'bytes')
     const publicInputs = Array.from(fromHex(claim.publicInputs, 'bytes'), (byte) => "0x" + byte.toString(16).padStart(2, '0')) 
