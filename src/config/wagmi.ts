@@ -52,17 +52,25 @@ export const hyperliquidMainnet = {
   },
   rpcUrls: {
     default: {
-      http: ["https://rpc.purroofgroup.com"],
+      http: [
+        // "https://rpc.purroofgroup.com",
+        "https://arcane-flux.purroofgroup.com",
+        "https://rpc.hyperliquid.xyz/evm"
+      ],
     },
     public: {
-      http: ["https://rpc.purroofgroup.com"],
+      http: [
+        // "https://rpc.purroofgroup.com",
+        "https://arcane-flux.purroofgroup.com",
+        "https://rpc.hyperliquid.xyz/evm"
+      ],
     },
   },
   testnet: false,
 } as const satisfies Chain;
 
 
-export const hostNetwork = localTestnet
+export const hostNetwork = hyperliquidMainnet
 
 
 export const wagmiConfig = getDefaultConfig({
@@ -73,7 +81,7 @@ export const wagmiConfig = getDefaultConfig({
     [mainnet.id]: http(),
     [bsc.id]: http(),
     [arbitrum.id]: http(),
-    [hyperliquidMainnet.id]: http(),
+    [hyperliquidMainnet.id]: http(undefined, {timeout: 60_000}),
     [hyperliquidTestnet.id]: http(),
     [localTestnet.id]: http(),
   },

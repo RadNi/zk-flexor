@@ -30,16 +30,16 @@ export default function SwitchAccountModal({
   }
 const tipPresets = [
   {
-    value: (balanceTarget * 0.1 / 10000).toFixed(6),
-    label: `Low (${(balanceTarget * 0.1 / 10000).toFixed(6)} ETH)`
+    value: (balanceTarget * 0.1 / 10000).toFixed(7),
+    label: `Low (${(balanceTarget * 0.1 / 10000).toFixed(7)} ETH)`
   },
   {
-    value: (balanceTarget * 0.1 / 1000).toFixed(6),
-    label: `Medium (${(balanceTarget * 0.1 / 1000).toFixed(6)} ETH)`
+    value: (balanceTarget * 0.1 / 1000).toFixed(7),
+    label: `Medium (${(balanceTarget * 0.1 / 1000).toFixed(7)} ETH)`
   },
   {
-    value: (balanceTarget * 0.1 / 100).toFixed(6),
-    label: `High (${(balanceTarget * 0.1 / 100).toFixed(6)} ETH)`
+    value: (balanceTarget * 0.1 / 100).toFixed(7),
+    label: `High (${(balanceTarget * 0.1 / 100).toFixed(7)} ETH)`
   }
 ]
 

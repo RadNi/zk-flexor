@@ -7,6 +7,7 @@ import abi from "../../../public/Flexor.json"
 import { FLEXOR_ADDRESS } from '@/lib/utils'
 import { hostNetwork } from '@/config/wagmi'
 import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
+import { getLastBlockByChainId } from './utils'
 
 export type ExplorerItem = {
   id: string
@@ -44,37 +45,45 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
         // Filter all ProofSubmitted events
 
         // Query past events - adjust fromBlock as needed (e.g., deployment block)
-        const fromBlock = 0
-        const toBlock = 'latest'
-        const pastEvents = await contract.queryFilter("Claim", fromBlock, toBlock)
+        let pastEvents: (ethers.Log | ethers.EventLog)[] = []
+        let fromBlock = (await getLastBlockByChainId(hostNetwork.id)).number - 1000n
+        let toBlock: 'latest' | bigint = 'latest'
+        for (let index = 0; index < 100; index++) {
+          console.log("here", index)
+          pastEvents = pastEvents.concat(await contract.queryFilter("Claim", fromBlock, toBlock))
+
+
+          const pastItems = pastEvents.map((event) => {
+              const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.data)
+            return {
+              id: data[0] as string,
+              address: ethers.AbiCoder.defaultAbiCoder().decode(["address"], event.topics[1]!).toString(),
+              name: data[1] as string,
+              txHash: event.transactionHash,
+              chainId: BigInt(event.topics[3]!).toString(),
+              balance_target: data[2] as string,
+              // message: "",
+              blockNumber: event.blockNumber,
+              timestamp: event.blockNumber, // could add real timestamp if needed
+              tip: data[3] as string
+            }
+          }).reverse()
+            // Add new unique events at the **end** of current items
+          setItems((prev) => {
+            const newTxHashes = new Set(prev.map((item) => item.txHash))
+            const uniquePast = pastItems.filter((item) => !newTxHashes.has(item.txHash))
+            return [...prev, ...uniquePast].slice(-1000)
+          })
+
+          toBlock = fromBlock
+          fromBlock = toBlock - 1000n
+        }
+
+        console.log("Arrived")
+        console.log(pastEvents)
 
         if (cancelled) return
 
-
-        const pastItems = pastEvents.map((event) => {
-            console.log(event)
-            const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.data)
-            console.log(data[2])
-          return {
-            id: data[0] as string,
-            address: ethers.AbiCoder.defaultAbiCoder().decode(["address"], event.topics[1]!).toString(),
-            name: data[1] as string,
-            txHash: event.transactionHash,
-            chainId: BigInt(event.topics[3]!).toString(),
-            balance_target: data[2] as string,
-            // message: "",
-            blockNumber: event.blockNumber,
-            timestamp: event.blockNumber, // could add real timestamp if needed
-            tip: data[3] as string
-          }
-        }).reverse()
-
-        // Add new unique events at the **end** of current items
-        setItems((prev) => {
-          const newTxHashes = new Set(prev.map((item) => item.txHash))
-          const uniquePast = pastItems.filter((item) => !newTxHashes.has(item.txHash))
-          return [...prev, ...uniquePast].slice(-1000)
-        })
       } catch (e) {
         console.error('Error fetching past events:', e)
       }

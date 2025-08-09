@@ -2,15 +2,48 @@ import { hostNetwork, wagmiConfig } from '@/config/wagmi'
 import type { Claim, SigningMessage, VerificationResult } from '@/lib/types'
 import { FLEXOR_ADDRESS, verifyFinalProof } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
-import { readContract } from '@wagmi/core'
+import { getProof, readContract } from '@wagmi/core'
+import { keccak256 } from 'ethers'
 import abi from "public/Flexor.json"
 import { createPublicClient, fromHex, http, toHex } from 'viem'
+import { getTransactionReceipt, waitForTransactionReceipt } from 'viem/actions'
 
-
+export const PROOF_CHUNK_NUMBER = 1;
+export const CHUNK_SIZE = 16000;
+export const LAST_PART_SIZE = 224;
 
 // Find chain config by chainId from wagmiConfig.chains
 export function getChainById(chainId: number) {
   return wagmiConfig.chains.find((chain) => chain.id === chainId)
+}
+
+export async function getLastBlockByChainId(chainId: number) {
+    const chain = getChainById(chainId)
+  if (!chain) throw new Error(`Unsupported chainId ${chainId}`)
+
+  // Create client dynamically for this chain using its first RPC url
+  const client = createPublicClient({
+    chain,
+    transport: http(chain.rpcUrls.default.http[0]), // or chain.rpcUrls.public.http[0]
+  })
+
+  // Fetch block
+  const block = await client.getBlock()
+
+  return block
+}
+
+export async function getTransactionReceiptWrapper(tx: `0x${string}`) {
+    const chain = getChainById(hostNetwork.id)
+  if (!chain) throw new Error(`Unsupported chainId ${hostNetwork.id}`)
+
+  // Create client dynamically for this chain using its first RPC url
+  const client = createPublicClient({
+    chain,
+    transport: http(chain.rpcUrls.default.http[0]), // or chain.rpcUrls.public.http[0]
+  })
+  
+  return waitForTransactionReceipt(client, {hash: tx})
 }
 
 async function getBlockByChainId(chainId: number, blockNumber: bigint ) {
@@ -29,21 +62,42 @@ async function getBlockByChainId(chainId: number, blockNumber: bigint ) {
   return block
 }
 
+async function getStateRootByChainId(chainId: number, blockNumber: bigint ) {
+  const chain = getChainById(chainId)
+  if (!chain) throw new Error(`Unsupported chainId ${chainId}`)
+
+  // Create client dynamically for this chain using its first RPC url
+  const client = createPublicClient({
+    chain,
+    transport: http(chain.rpcUrls.default.http[0], {timeout: 60_000}), // or chain.rpcUrls.public.http[0]
+  })
+
+  // Fetch block
+  const result = await client.getProof({ address: "0x0000000000000000000000000000000000000000", storageKeys: [], blockNumber: blockNumber })
+  return keccak256(result.accountProof[0]!)
+}
+
 
 export async function readClaim(claimId: string): Promise<Claim> {
-    return await readContract(wagmiConfig, {
+    let x = await readContract(wagmiConfig, {
         chainId: hostNetwork.id,
         abi,
         address: FLEXOR_ADDRESS,
         functionName: 'getClaim',
         args: [claimId],
-    }) as Claim
+    })
+    console.log(x)
+    return x as Claim
 }
 
 export async function fullVerifyProof(claimId: string): Promise<VerificationResult> {
     const claim = await readClaim(claimId)
-    const proof = fromHex(claim.proof, 'bytes')
+    console.log(claim)
+    let totalProof: `0x${string}` = "0x"
+    claim.proof.forEach(p => totalProof = totalProof.concat(p.substring(2)) as `0x${string}`)
+    const proof = fromHex(totalProof, 'bytes')
     const publicInputs = Array.from(fromHex(claim.publicInputs, 'bytes'), (byte) => "0x" + byte.toString(16).padStart(2, '0')) 
+    console.log(claim.full_message)
     const fullMessage = JSON.parse(claim.full_message) as SigningMessage
     console.log('Contract result:', fullMessage)
     console.log(claim)
@@ -69,10 +123,20 @@ export async function fullVerifyProof(claimId: string): Promise<VerificationResu
 
     let statusMessage = ""
     try {
-        const block = await getBlockByChainId(+claim.chainId.toString(), claim.blockNumber)
-        console.log(block.stateRoot)
-        console.log(claim.publicInputs.substring(0, 66))
-        stateRoot_check = block.stateRoot === claim.publicInputs.substring(0, 66)
+        if (claim.chainId === 999n) {
+            console.log("Sag san")
+            const stateRoot = await getStateRootByChainId(Number(claim.chainId), claim.blockNumber)
+            stateRoot_check = stateRoot === claim.publicInputs.substring(0, 66)
+            console.log("miad?")
+            console.log(stateRoot)
+            console.log(claim.publicInputs.substring(0, 66))
+        } else {
+            console.log("miad2?")
+            const block = await getBlockByChainId(+claim.chainId.toString(), claim.blockNumber)
+            console.log(block.stateRoot)
+            console.log(claim.publicInputs.substring(0, 66))
+            stateRoot_check = block.stateRoot === claim.publicInputs.substring(0, 66)
+        }
     } catch (err) {
         statusMessage += (err instanceof Error ? err.message : String(err)) + ' - '
     }
@@ -117,7 +181,7 @@ export async function fullVerifyProof(claimId: string): Promise<VerificationResu
             statusMessage = 'Proof is verified'
         }
         else if (claim.chainId === 999n) {
-            statusMessage = 'Hyperliquid RPCs are broken to verify state root!'
+            statusMessage = 'Hyperliquid RPCs are broken to verify state root! Specific error:' + statusMessage
             status = 'warning'
         }
     }

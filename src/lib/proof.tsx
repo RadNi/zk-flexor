@@ -116,7 +116,7 @@ async function generate_proof(show: (arg0: string, arg1?: number)=>void, request
     let recursiveProof;
     let input;
 
-    increment = 100 / ((1 + nodes_inner.length + 1) * 2)
+    increment = 100 / (1 + nodes_inner.length + 1 + 2)
     // initial layer
     const initial_nodes_length = nodes_initial.length
     let new_index = 0
@@ -135,7 +135,7 @@ async function generate_proof(show: (arg0: string, arg1?: number)=>void, request
     console.log(input)
     show("Generating initial proof... ⏳ ");
     const initial_proof = await generateInitialProof(input)
-    show("Verifying initial proof... ⏳", increment);
+    // show("Verifying initial proof... ⏳", increment);
     // const initial_verified = await verifyInitialProof(initial_proof.proof, initial_proof.publicInputs)
     // show("Initial proof verified: " + initial_verified, increment);
     recursiveProof = {proof: deflattenFields(initial_proof.proof), publicInputs: initial_proof.publicInputs}
@@ -165,9 +165,9 @@ async function generate_proof(show: (arg0: string, arg1?: number)=>void, request
           // show("Generating witness for recursive proof #" + (i+1) + " ...⏳ ");
           console.log(input)
           // const { witness } = await mptBodyCircuitNoir.execute(input)
-          show("Generating recursive proof #" + (i+1) + " ...⏳ ");
+          show("Generating recursive proof #" + (i+1) + " ...⏳ ", increment);
           const {proof, publicInputs} = await generateIntermediaryProof(input)
-          show("Verifying intermediary proof #" + (i+1) + " ...⏳ ", increment);
+          // show("Verifying intermediary proof #" + (i+1) + " ...⏳ ", increment);
           // const verified = await verifyIntermediaryProof(proof, publicInputs)
           // show("Intermediary proof verified: " + verified, increment);
           recursiveProof = {proof: deflattenFields(proof), publicInputs}
@@ -176,11 +176,11 @@ async function generate_proof(show: (arg0: string, arg1?: number)=>void, request
           input.is_first_inner_layer = 0
           // show("Generating witness for recursive proof #" + (i+1) + " ...⏳ ");
           console.log(input)
-          show("Generating intermediary proof #" + (i+1) + " ...⏳ ");
+          show("Generating intermediary proof #" + (i+1) + " ...⏳ ", increment);
           const {proof, publicInputs} = await generateIntermediaryProof(input)
           console.log(proof)
           console.log(publicInputs)
-          show("Verifying intermediary proof #" + (i+1) + " ...⏳ ", increment);
+          // show("Verifying intermediary proof #" + (i+1) + " ...⏳ ", increment);
           // const verified = await verifyIntermediaryProof(proof, publicInputs)
           // show("Intermediary proof verified: " + verified, increment);
           recursiveProof = {proof: deflattenFields(proof), publicInputs}
@@ -210,13 +210,13 @@ async function generate_proof(show: (arg0: string, arg1?: number)=>void, request
     } as InputMap
     console.log(balanceCheckInput)
     // show("Generating witness for final proof ...⏳ ");
-    show("Generating final proof ...⏳ ");
+    show("Generating final proof ...⏳ ", increment);
     const finalProof = await generateFinalProof(balanceCheckInput)
-    show("Final proof:", increment)
+    show("Final proof:")
     console.log(finalProof)
 
     // Verify recursive proof
-    show("Verifying final proof... ⏳");
+    show("Verifying final proof... ⏳", increment);
     const verified = await verifyFinalProof(finalProof.proof, finalProof.publicInputs)
     show("Final proof verified: " + verified, increment);
 

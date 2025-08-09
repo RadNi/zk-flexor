@@ -23,7 +23,7 @@ export default function Inputs({
 }) {
   const [balance, setBalance] = useState("")
   const [name, setName] = useState("")
-  const [address, setAddress] = useState("")
+  const [address, setAddress] = useState<string>()
   const [message, setMessage] = useState("")
 
   const [errors, setErrors] = useState({

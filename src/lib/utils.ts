@@ -6,7 +6,10 @@ import mptBodyInitialCircuit from "@/target/initial_mpt_body.json";
 import balanceCheckCircuit from "@/target/leaf_check.json";
 import { Noir, type CompiledCircuit, type InputMap } from "@noir-lang/noir_js";
 
-export const FLEXOR_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+// export const FLEXOR_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+// export const FLEXOR_ADDRESS = "0x789f7b39e6C356044E617724be3bbb441b4E4438"
+export const FLEXOR_ADDRESS = "0x67A76a88025255950dA1a47C390F844cfcaE2Ad1"
+
 
 const mptBodyInitialCircuitNoir = new Noir(mptBodyInitialCircuit as CompiledCircuit);
 const mptBodyCircuitNoir = new Noir(mptBodyCircuit as CompiledCircuit);
