@@ -8,6 +8,8 @@ import { FLEXOR_ADDRESS } from '@/lib/utils'
 import { hostNetwork } from '@/config/wagmi'
 import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
 import { getLastBlockByChainId } from './utils'
+import { GoldRushClient } from "@covalenthq/client-sdk";
+import { getGoldrushLogs } from '@/actions/getGoldrushLogs'
 
 export type ExplorerItem = {
   id: string
@@ -40,35 +42,32 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
 
     async function fetchPastEvents() {
       try {
-        console.log(provider)
-        const contract = new ethers.Contract(FLEXOR_ADDRESS, abi, provider)
-        // Filter all ProofSubmitted events
 
-        // Query past events - adjust fromBlock as needed (e.g., deployment block)
+
         let pastEvents: (ethers.Log | ethers.EventLog)[] = []
+        let goldRushData: any[] = []
         let fromBlock = Math.max(Number((await getLastBlockByChainId(hostNetwork.id)).number) - 1000, 0)
         let toBlock: 'latest' | number = 'latest'
-        for (let index = 0; index < 100 && fromBlock >= 0; index++) {
+        for (let index = 0; index < 10 && fromBlock >= 0; index++) {
           console.log("here", index)
-          pastEvents = pastEvents.concat(await contract.queryFilter("Claim", fromBlock, toBlock))
+          let logs = await getGoldrushLogs(fromBlock, toBlock)
+          console.log(logs)
 
-
-          const pastItems = pastEvents.map((event) => {
-              const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.data)
+          goldRushData = goldRushData.concat(logs)
+          const pastItems = goldRushData.map((event) => {
+            const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.raw_log_data)
             return {
               id: data[0] as string,
-              address: ethers.AbiCoder.defaultAbiCoder().decode(["address"], event.topics[1]!).toString(),
+              address: ethers.AbiCoder.defaultAbiCoder().decode(["address"], event.raw_log_topics[1]!).toString(),
               name: data[1] as string,
-              txHash: event.transactionHash,
-              chainId: BigInt(event.topics[3]!).toString(),
+              txHash: event.tx_hash,
+              chainId: BigInt(event.raw_log_topics[3]!).toString(),
               balance_target: data[2] as string,
-              // message: "",
-              blockNumber: event.blockNumber,
-              timestamp: event.blockNumber, // could add real timestamp if needed
+              blockNumber: event.block_height,
+              timestamp: event.block_height, // could add real timestamp if needed
               tip: data[3] as string
             }
           }).reverse()
-            // Add new unique events at the **end** of current items
           setItems((prev) => {
             const newTxHashes = new Set(prev.map((item) => item.txHash))
             const uniquePast = pastItems.filter((item) => !newTxHashes.has(item.txHash))
@@ -76,7 +75,7 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
           })
 
           toBlock = fromBlock
-          fromBlock = toBlock - 1000
+          fromBlock = toBlock - 1000000
         }
 
         console.log("Arrived")
