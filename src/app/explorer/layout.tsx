@@ -8,8 +8,8 @@ import { FLEXOR_ADDRESS } from '@/lib/utils'
 import { hostNetwork } from '@/config/wagmi'
 import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
 import { getLastBlockByChainId } from './utils'
-import { GoldRushClient } from "@covalenthq/client-sdk";
 import { getGoldrushLogs } from '@/actions/getGoldrushLogs'
+import type { LogEvent } from '@covalenthq/client-sdk'
 
 export type ExplorerItem = {
   id: string
@@ -44,24 +44,21 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
       try {
 
 
-        let pastEvents: (ethers.Log | ethers.EventLog)[] = []
-        let goldRushData: any[] = []
+        let goldRushData: LogEvent[] = []
         let fromBlock = Math.max(Number((await getLastBlockByChainId(hostNetwork.id)).number) - 1000, 0)
         let toBlock: 'latest' | number = 'latest'
         for (let index = 0; index < 10 && fromBlock >= 0; index++) {
-          console.log("here", index)
-          let logs = await getGoldrushLogs(fromBlock, toBlock)
-          console.log(logs)
+          const logs = await getGoldrushLogs(fromBlock, toBlock)
 
           goldRushData = goldRushData.concat(logs)
           const pastItems = goldRushData.map((event) => {
-            const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.raw_log_data)
+            const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.raw_log_data!)
             return {
               id: data[0] as string,
-              address: ethers.AbiCoder.defaultAbiCoder().decode(["address"], event.raw_log_topics[1]!).toString(),
+              address: ethers.AbiCoder.defaultAbiCoder().decode(["address"], event.raw_log_topics![1]!).toString(),
               name: data[1] as string,
-              txHash: event.tx_hash,
-              chainId: BigInt(event.raw_log_topics[3]!).toString(),
+              txHash: event.tx_hash!,
+              chainId: BigInt(event.raw_log_topics![3]!).toString(),
               balance_target: data[2] as string,
               blockNumber: event.block_height,
               timestamp: event.block_height, // could add real timestamp if needed
@@ -79,7 +76,6 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
         }
 
         console.log("Arrived")
-        console.log(pastEvents)
 
         if (cancelled) return
 

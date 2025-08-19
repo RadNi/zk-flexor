@@ -1,12 +1,12 @@
 "use server";
 
-import { GoldRushClient } from "@covalenthq/client-sdk";
+import { GoldRushClient, type LogEvent } from "@covalenthq/client-sdk";
 import { FLEXOR_ADDRESS } from "@/lib/utils";
 
 export async function getGoldrushLogs(
   startingBlock: "earliest" | number,
   endingBlock: "latest" | number
-) {
+): Promise<LogEvent[]> {
   const client = new GoldRushClient(process.env.GOLDRUSH_KEY!);
 
   const resp = client.BaseService.getLogEventsByTopicHash(
@@ -15,7 +15,7 @@ export async function getGoldrushLogs(
     { startingBlock, endingBlock }
   );
 
-  const logs: any[] = [];
+  const logs: LogEvent[] = [];
   for await (const value of resp) {
     value.data?.items?.forEach((e) => {
       if (e.sender_address === FLEXOR_ADDRESS.toLowerCase()) {
