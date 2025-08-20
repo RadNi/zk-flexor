@@ -13,7 +13,7 @@ export default function Footer() {
 
         <div className="flex space-x-6 items-center">
           <Link
-            href="https://github.com/YOUR_USERNAME/YOUR_REPO"
+            href="https://github.com/RadNi/zk-flexor"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-white transition"
@@ -23,7 +23,7 @@ export default function Footer() {
           </Link>
 
           <Link
-            href="https://twitter.com/YOUR_TWITTER_HANDLE"
+            href="https://twitter.com/0xradni"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-white transition"
