@@ -1,7 +1,7 @@
 'use client'
 
 import { Dialog } from '@headlessui/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export default function SwitchAccountModal({
   isOpen,
@@ -19,6 +19,7 @@ export default function SwitchAccountModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionResult, setSubmissionResult] = useState<string | null>(null)
   const [showResultPopup, setShowResultPopup] = useState(false)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   const emojiForTip = (value: number) => {
     if (value >= balanceTarget * 0.1/10) return '🤩'
@@ -28,29 +29,31 @@ export default function SwitchAccountModal({
     if (value >= balanceTarget * 0.1/100000) return '😒'
     return '🤬'
   }
-const tipPresets = [
-  {
-    value: (balanceTarget * 0.1 / 10000).toFixed(7),
-    label: `Low (${(balanceTarget * 0.1 / 10000).toFixed(7)} ETH)`
-  },
-  {
-    value: (balanceTarget * 0.1 / 1000).toFixed(7),
-    label: `Medium (${(balanceTarget * 0.1 / 1000).toFixed(7)} ETH)`
-  },
-  {
-    value: (balanceTarget * 0.1 / 100).toFixed(7),
-    label: `High (${(balanceTarget * 0.1 / 100).toFixed(7)} ETH)`
-  }
-]
 
+  const tipPresets = [
+    {
+      value: (balanceTarget * 0.1 / 10000).toFixed(7),
+      label: `Low (${(balanceTarget * 0.1 / 10000).toFixed(7)} ETH)`
+    },
+    {
+      value: (balanceTarget * 0.1 / 1000).toFixed(7),
+      label: `Medium (${(balanceTarget * 0.1 / 1000).toFixed(7)} ETH)`
+    },
+    {
+      value: (balanceTarget * 0.1 / 100).toFixed(7),
+      label: `High (${(balanceTarget * 0.1 / 100).toFixed(7)} ETH)`
+    }
+  ]
 
   useEffect(() => {
     if (showResultPopup) {
-      const timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         setShowResultPopup(false)
         setSubmissionResult(null)
-      }, 3000)
-      return () => clearTimeout(timer)
+      }, 8000) // 8 seconds
+      return () => {
+        if (timerRef.current) clearTimeout(timerRef.current)
+      }
     }
   }, [showResultPopup])
 
@@ -59,7 +62,7 @@ const tipPresets = [
     setSubmissionResult(null)
     try {
       await onSubmitProof(tipAmount)
-      setSubmissionResult('Proof submitted successfully.')
+      setSubmissionResult('Proof submitted! Visit the Explorer to view your proof.')
       setShowResultPopup(true)
       onClose()
       setHasSwitched(false)
@@ -84,8 +87,8 @@ const tipPresets = [
 
             <Dialog.Description className="mb-4 text-gray-300">
               {hasSwitched
-                ? 'Select a tip amount or enter your own.'
-                : 'Please switch to an account with HYPE tokens to submit the proof on-chain.'}
+                ? 'Select a tip amount or enter your own. Tip is optional, but it will be visible in the explorer. Tip shows your social status:) '
+                : 'Please switch to an account with HYPE tokens to submit the proof on-chain. Using the same account that proof is generated for compromises your privacy!'}
             </Dialog.Description>
 
             {!hasSwitched ? (
@@ -129,10 +132,8 @@ const tipPresets = [
                       className="w-28 p-2 rounded bg-gray-800 text-white border border-gray-600 text-center"
                       min="0"
                       disabled={isSubmitting}
-                    /><span className="text-2xl">
-                      {emojiForTip(Number(tipAmount) || 0)}
-                    </span>
-
+                    />
+                    <span className="text-2xl">{emojiForTip(Number(tipAmount) || 0)}</span>
                   </div>
                 </div>
 
@@ -150,15 +151,12 @@ const tipPresets = [
       </Dialog>
 
       {/* Floating result popup */}
-      {showResultPopup && submissionResult && (
-        <div
-          className={`fixed top-8 right-8 max-w-xs bg-[#808080] bg-opacity-10 text-white backdrop-blur-md rounded-xl p-4 shadow-lg z-60 animate-fadeInOut`}
-          role="alert"
-        >
+      {submissionResult && showResultPopup && (
+        <div className="fixed top-8 right-8 max-w-xs bg-gray-900/90 bg-opacity-10 text-white backdrop-blur-md rounded-xl p-4 shadow-lg z-60 animate-fadeInOut">
           <p
-            className={`text-center ${
-              submissionResult.includes('successfully') ? 'text-green-300' : 'text-red-400'
-            }`}
+            className={`${
+              submissionResult.includes('Proof submitted') ? 'text-blue-400' : 'text-red-400'
+            } `}
           >
             {submissionResult}
           </p>
@@ -183,7 +181,7 @@ const tipPresets = [
         }
 
         .animate-fadeInOut {
-          animation: fadeInOut 3s ease forwards;
+          animation: fadeInOut 8s ease forwards;
         }
       `}</style>
     </>

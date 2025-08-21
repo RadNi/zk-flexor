@@ -89,7 +89,10 @@ export default function Inputs({
         <input
           placeholder="Flexor address (optional)"
           value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value.trim()
+            setAddress(val === "" ? undefined : val)
+          }}
           className="w-full p-3 bg-gray-900 text-white rounded-lg"
           readOnly={disable}
         />

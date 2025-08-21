@@ -1,3 +1,5 @@
+'use client'
+
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { arbitrum, bsc, mainnet } from "wagmi/chains";
 import { type Chain } from 'viem';
@@ -53,23 +55,25 @@ export const hyperliquidMainnet = {
   rpcUrls: {
     default: {
       http: [
-        // "https://rpc.purroofgroup.com",
-        "https://arcane-flux.purroofgroup.com",
-        "https://rpc.hyperliquid.xyz/evm"
+        "https://rpc.hyperliquid.xyz/evm",
+        // "https://rpc.underlayer.dev",
+        "https://rpc.purroofgroup.com",
+        // "https://arcane-flux.purroofgroup.com",
       ],
     },
     public: {
       http: [
-        // "https://rpc.purroofgroup.com",
-        "https://arcane-flux.purroofgroup.com",
-        "https://rpc.hyperliquid.xyz/evm"
+        "https://rpc.hyperliquid.xyz/evm",
+        // "https://rpc.underlayer.dev",
+        "https://rpc.purroofgroup.com",
+        // "https://arcane-flux.purroofgroup.com",
       ],
     },
   },
   testnet: false,
 } as const satisfies Chain;
 
-
+export const HyperliquidProofRPC = "https://rpc.purroofgroup.com"
 export const hostNetwork = hyperliquidMainnet
 
 

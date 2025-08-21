@@ -1,4 +1,5 @@
-import { hostNetwork, wagmiConfig } from '@/config/wagmi'
+import { getStateRootByRPC } from '@/actions/rpc'
+import { hostNetwork, HyperliquidProofRPC, wagmiConfig } from '@/config/wagmi'
 import type { Claim, SigningMessage, VerificationResult } from '@/lib/types'
 import { FLEXOR_ADDRESS, verifyFinalProof } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
@@ -62,20 +63,20 @@ async function getBlockByChainId(chainId: number, blockNumber: bigint ) {
   return block
 }
 
-async function getStateRootByChainId(chainId: number, blockNumber: bigint ) {
-  const chain = getChainById(chainId)
-  if (!chain) throw new Error(`Unsupported chainId ${chainId}`)
+// async function getStateRootByChainId(chainId: number, blockNumber: bigint ) {
+//   const chain = getChainById(chainId)
+//   if (!chain) throw new Error(`Unsupported chainId ${chainId}`)
 
-  // Create client dynamically for this chain using its first RPC url
-  const client = createPublicClient({
-    chain,
-    transport: http(chain.rpcUrls.default.http[0], {timeout: 60_000}), // or chain.rpcUrls.public.http[0]
-  })
+//   // Create client dynamically for this chain using its first RPC url
+//   const client = createPublicClient({
+//     chain,
+//     transport: http(chain.rpcUrls.default.http[1], {timeout: 60_000}), // or chain.rpcUrls.public.http[0]
+//   })
 
-  // Fetch block
-  const result = await client.getProof({ address: "0x0000000000000000000000000000000000000000", storageKeys: [], blockNumber: blockNumber })
-  return keccak256(result.accountProof[0]!)
-}
+//   // Fetch block
+//   const result = await client.getProof({ address: "0x0000000000000000000000000000000000000000", storageKeys: [], blockNumber: blockNumber })
+//   return keccak256(result.accountProof[0]!)
+// }
 
 
 export async function readClaim(claimId: string): Promise<Claim> {
@@ -126,7 +127,7 @@ export async function fullVerifyProof(claimId: string, txHash: string): Promise<
     let statusMessage = ""
     try {
         if (claim.chainId === 999n) {
-            const stateRoot = await getStateRootByChainId(Number(claim.chainId), claim.blockNumber)
+            const stateRoot = await getStateRootByRPC(HyperliquidProofRPC, claim.blockNumber)
             stateRoot_check = stateRoot === claim.publicInputs.substring(0, 66)
             console.log(stateRoot)
             console.log(claim.publicInputs.substring(0, 66))

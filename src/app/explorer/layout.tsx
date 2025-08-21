@@ -42,7 +42,7 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
 
     async function fetchPastEvents() {
       try {
-
+        console.log("reading past events")
 
         let goldRushData: LogEvent[] = []
         let fromBlock = Math.max(Number((await getLastBlockByChainId(hostNetwork.id)).number) - 1000, 0)
@@ -80,6 +80,7 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
         if (cancelled) return
 
       } catch (e) {
+        console.log("haaaaa??? ", e)
         console.error('Error fetching past events:', e)
       }
     }
@@ -87,6 +88,7 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
     fetchPastEvents().catch(e => console.error('Error fetching past events:', e))
 
     return () => {
+      console.log("what?!!")
       cancelled = true
     }
   }, [provider])

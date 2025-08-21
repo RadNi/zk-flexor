@@ -109,7 +109,7 @@ async function sign_message(
 
 
 
-async function generate_proof(show: (arg0: string, arg1?: number)=>void, request: ProofRequest): Promise<ProofData> {
+async function generate_proof_inner(show: (arg0: string, arg1?: number)=>void, request: ProofRequest): Promise<ProofData> {
     const {balance_target: prepared_balance_target, balance_target_length} = getBalanceTargetMain(request.balance)
     // show("Generating circuits verification keys... ⏳");
     let recursiveProof;
@@ -235,7 +235,7 @@ export function getBalanceTargetMain(balanceTarget: number) {
 async function initialize(
   show: (arg0: string, arg1?: number)=>void, 
   request: ProofRequest): Promise<bigint> {
-    show("Connecting to metamask... ⏳");
+    show("Reading data from RPC... ⏳");
     
     const address = getAccount(wagmiConfig).address!
     const blockNumber = await getCurrentBlockNumber(getAccount(wagmiConfig).chainId!)
@@ -286,7 +286,7 @@ export async function generateProof (
   console.log(request.balance)
   const blockNumber = await initialize(tick, request)
   console.log("generating proof")
-  const {proof, publicInputs} = await generate_proof(tick, request)
+  const {proof, publicInputs} = await generate_proof_inner(tick, request)
   // const proof = Uint8Array.from(Array(16224).fill([10]).flat())
   // const publicInputs = Array(97).fill([`0x${10}`]).flat()
   const submitionInput: SubmitionInputs = {
