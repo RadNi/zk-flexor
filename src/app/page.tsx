@@ -44,6 +44,14 @@ export default function HomePage() {
           Hyperliquid
         </a>
       </p>
+      <div className="mt-16">
+        <Link href="/faq">
+          <div className="px-8 py-4 border border-white text-white font-semibold rounded-xl hover:bg-white hover:text-black transition shadow cursor-pointer">
+            Frequently Asked Questions
+          </div>
+        </Link>
+      </div>
+
     </main>
   )
 }

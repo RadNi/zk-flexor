@@ -4,7 +4,6 @@ import type { Claim, SigningMessage, VerificationResult } from '@/lib/types'
 import { FLEXOR_ADDRESS, verifyFinalProof } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
 import { getTransaction, readContract } from '@wagmi/core'
-import { keccak256 } from 'ethers'
 import abi from "public/Flexor.json"
 import { createPublicClient, fromHex, http, toHex } from 'viem'
 import { waitForTransactionReceipt } from 'viem/actions'

@@ -137,42 +137,46 @@ export default function ExplorerPage() {
                     {/* </div> */}
                     <div className="w-full md:w-1/6 text-sm text-gray-500 whitespace-nowrap">{item.chainId}</div>
 
-                    <div className="w-full md:w-1/6 relative group text-sm whitespace-nowrap">
+                    <div className="w-full md:w-1/6 relative text-sm whitespace-nowrap">
                     {['verified', 'rejected', 'warning'].includes(item.status!) ? (
+                      <div className="relative group inline-block">
                         <span
-                        className={
+                          className={
                             item.status === 'verified'
-                            ? 'text-green-400'
-                            : item.status === 'rejected'
-                            ? 'text-red-400'
-                            : 'text-yellow-400'
-                        }
+                              ? 'text-green-400'
+                              : item.status === 'rejected'
+                              ? 'text-red-400'
+                              : 'text-yellow-400'
+                          }
                         >
-                        {item.status === 'verified'
+                          {item.status === 'verified'
                             ? '✔ Verified'
                             : item.status === 'rejected'
                             ? '✖ Rejected'
                             : '⚠ Warning'}
                         </span>
+
+                        {item.statusMessage && (
+                          <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-3 py-2 rounded shadow-lg z-10 max-w-sm w-fit break-words whitespace-normal opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            {item.statusMessage}
+                          </div>
+                        )}
+                      </div>
                     ) : verifying.has(item.id) ? (
-                        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                     ) : (
-                        <button
+                      <button
                         onClick={(e) => {
-                            e.preventDefault()
-                            verifyProof(item.id, item.txHash).catch(e => console.log("Proof verification faild: " + e))
+                          e.preventDefault()
+                          verifyProof(item.id, item.txHash).catch(e => console.log("Proof verification failed: " + e))
                         }}
                         className="bg-blue-600 px-3 py-1.5 rounded text-xs hover:bg-blue-700 transition font-medium shadow"
-                        >
+                      >
                         Click to verify
-                        </button>
+                      </button>
                     )}
-                    {['verified', 'rejected', 'warning'].includes(item.status!) && item.statusMessage && (
-                        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-3 py-2 rounded shadow-lg z-10 max-w-sm w-fit break-words whitespace-normal opacity-0 group-hover:opacity-100 transition-opacity">
-                            {item.statusMessage}
-                        </div>
-                    )}
-                    </div>
+                  </div>
+
                 </div>
                 </Link>
             ))}

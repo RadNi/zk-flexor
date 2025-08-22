@@ -78,16 +78,16 @@ export const hostNetwork = hyperliquidMainnet
 
 
 export const wagmiConfig = getDefaultConfig({
-  appName: "Balance Proof",
-  projectId: "YOUR_PROJECT_ID",
-  chains: [mainnet, hyperliquidMainnet, hyperliquidTestnet, bsc, arbitrum, localTestnet],
+  appName: "ZK-Flexor",
+  projectId: "999",
+  chains: [mainnet, hyperliquidMainnet, bsc, arbitrum],
   transports: {
     [mainnet.id]: http(),
     [bsc.id]: http(),
     [arbitrum.id]: http(),
     [hyperliquidMainnet.id]: http(undefined, {timeout: 60_000}),
-    [hyperliquidTestnet.id]: http(),
-    [localTestnet.id]: http(),
+    // [hyperliquidTestnet.id]: http(),
+    // [localTestnet.id]: http(),
   },
   ssr: true,
 });
