@@ -79,6 +79,13 @@ export default function FAQPage() {
             </AccordionContent>
           </AccordionItem>
 
+          <AccordionItem value="mobile-support">
+            <AccordionTrigger className="text-xl font-semibold">📱 Can I generate proofs from a phone?</AccordionTrigger>
+            <AccordionContent className="text-lg text-gray-300">
+                Currently, proof generation is only supported on desktop browsers. Phone proof generation will be added soon.
+            </AccordionContent>
+          </AccordionItem>
+
         </Accordion>
 
         <div className="mt-12 text-center">
