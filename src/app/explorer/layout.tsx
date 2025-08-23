@@ -44,14 +44,12 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
       try {
         console.log("reading past events")
 
-        let goldRushData: LogEvent[] = []
-        let fromBlock = Math.max(Number((await getLastBlockByChainId(hostNetwork.id)).number) - 1000, 0)
+        let fromBlock = Math.max(Number((await getLastBlockByChainId(hostNetwork.id)).number) - 1000000, 0)
         let toBlock: 'latest' | number = 'latest'
         for (let index = 0; index < 10 && fromBlock >= 0; index++) {
           const logs = await getGoldrushLogs(fromBlock, toBlock)
 
-          goldRushData = goldRushData.concat(logs)
-          const pastItems = goldRushData.map((event) => {
+          const pastItems = logs.reverse().map((event) => {
             const data = ethers.AbiCoder.defaultAbiCoder().decode(["uint256", "string", "uint256", "uint"], event.raw_log_data!)
             return {
               id: data[0] as string,
@@ -64,7 +62,7 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
               timestamp: event.block_height, // could add real timestamp if needed
               tip: data[3] as string
             }
-          }).reverse()
+          })
           setItems((prev) => {
             const newTxHashes = new Set(prev.map((item) => item.txHash))
             const uniquePast = pastItems.filter((item) => !newTxHashes.has(item.txHash))
@@ -75,12 +73,9 @@ export default function ExplorerLayout({ children }: { children: React.ReactNode
           fromBlock = toBlock - 1000000
         }
 
-        console.log("Arrived")
-
         if (cancelled) return
 
       } catch (e) {
-        console.log("haaaaa??? ", e)
         console.error('Error fetching past events:', e)
       }
     }
