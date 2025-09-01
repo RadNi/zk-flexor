@@ -6,11 +6,13 @@ import { ethers } from 'ethers'
 import { fullVerifyProof, getChainById } from './utils'
 import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
 import { shortenHash } from '@/lib/proof_helpers'
+import { useProver } from '@/components/ProverProvider'
 
 const ITEMS_PER_PAGE = 10
 
 
 export default function ExplorerPage() {
+  const { prover, mode } = useProver()
   const { items, setItems } = useContext(ExplorerCacheContext)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -42,7 +44,7 @@ export default function ExplorerPage() {
 
   try {
     // Await if fullVerifyProof is async
-    const outcome = await fullVerifyProof(claimId, txHash)
+    const outcome = await fullVerifyProof(prover, claimId, txHash)
 
     setItems((prev) =>
       prev.map((item) =>
@@ -94,7 +96,7 @@ export default function ExplorerPage() {
 
       <div className="flex flex-col gap-4">
         {paginatedItems.length === 0 ? (
-            <p>No items found.</p>
+            <p>Loading items...</p>
         ) : (
         <>
             {/* Header Row */}

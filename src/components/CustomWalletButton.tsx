@@ -31,14 +31,14 @@ export default function CustomWalletButton() {
                 opacity: 0,
                 pointerEvents: "none",
                 userSelect: "none",
-                height: "38px", // reserve height to avoid layout jump
+                height: "34px", // slightly smaller
               }}
             />
           );
         }
 
         const baseButtonClasses =
-          "flex items-center gap-1 px-4 h-9 rounded-full text-sm font-medium transition-colors border border-transparent cursor-pointer select-none";
+          "flex items-center gap-1 px-3 h-8 rounded-full text-xs font-medium transition-colors border border-transparent cursor-pointer select-none";
 
         const connectButtonClasses =
           baseButtonClasses +
@@ -53,34 +53,37 @@ export default function CustomWalletButton() {
           " bg-gray-900 text-white hover:bg-gray-800 border border-gray-700";
 
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             {!connected ? (
               <button onClick={openConnectModal} className={connectButtonClasses}>
                 Connect Wallet
               </button>
             ) : (
               <>
-                <button onClick={openChainModal} className={chainButtonClasses}>
-                  {chain.hasIcon && chain.iconUrl && (
-                    <Image
+                {/* Wrap network and account info */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <button onClick={openChainModal} className={chainButtonClasses}>
+                    {chain.hasIcon && chain.iconUrl && (
+                      <Image
                         src={chain.iconUrl ?? '/fallback-icon.png'}
                         alt={chain.name ?? 'Chain icon'}
                         width={16}
                         height={16}
                         style={{
-                            borderRadius: '9999px',
-                            background: chain.iconBackground,
-                            marginRight: 6,
-                            verticalAlign: 'middle',
+                          borderRadius: '9999px',
+                          background: chain.iconBackground,
+                          marginRight: 4,
+                          verticalAlign: 'middle',
                         }}
-                    />
-                  )}
-                  {chain.name}
-                </button>
-                <button onClick={openAccountModal} className={accountButtonClasses}>
-                  {account.displayName}
-                  {account.displayBalance ? ` (${account.displayBalance})` : ""}
-                </button>
+                      />
+                    )}
+                    {chain.name}
+                  </button>
+                  <button onClick={openAccountModal} className={accountButtonClasses}>
+                    {account.displayName}
+                    {account.displayBalance ? ` (${account.displayBalance})` : ""}
+                  </button>
+                </div>
               </>
             )}
           </div>

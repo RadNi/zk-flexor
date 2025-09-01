@@ -4,13 +4,16 @@ import { keccak256 } from "ethers";
 import { innner_layer_vk, final_vk } from "@/target/verification_keys";
 import { calculateSigRecovery, ecrecover, fromRPCSig, hashPersonalMessage, pubToAddress, type PrefixedHexString } from "@ethereumjs/util";
 import { getNodesFromProof, type MPTProof, type Node } from "mpt-noirjs"
-import { getProof, getAccount, signMessage } from '@wagmi/core'
+import { getAccount, signMessage } from '@wagmi/core'
 import { wagmiConfig } from '@/config/wagmi';
 import { toBytes } from 'viem';
-import { generateFinalProof, generateInitialProof, generateIntermediaryProof, verifyFinalProof } from './utils';
+import { ServerProver } from './utils';
 import { createPublicClient, http } from 'viem'
 import type { ProofRequest, SigningMessage, SubmitionInputs } from "./types";
-import { bigintToUint8Array, getInitialPlaceHolderInput, getInitialPublicInputs, hexStringToStringUint8Array, uint8ArrayToStringArray } from "./proof_helpers";
+import { bigintToUint8Array, getInitialPlaceHolderInput, getInitialPublicInputs, getProofWithCustomRpc, hexStringToStringUint8Array, uint8ArrayToStringArray } from "./proof_helpers";
+// import { serverGenerateFinalProof, serverGenerateInitialProof, serverGenerateIntermediaryProof } from "./server_proof";
+
+const prover = new ServerProver()
 
 export async function getCurrentBlockNumber(chainId: number): Promise<bigint> {
   const chain = wagmiConfig.chains.find((c) => c.id === chainId)
@@ -133,9 +136,13 @@ async function generate_proof_inner(show: (arg0: string, arg1?: number)=>void, r
     show("Generating initial proof witness... ⏳ ");
     console.log(input)
     show("Generating initial proof... ⏳ ");
-    const initial_proof = await generateInitialProof(input)
+    const initial_proof = await prover.generateInitialProof(input)
+    // const initial_proof = await generateInitialProof(input)
+    console.log(initial_proof)
     // show("Verifying initial proof... ⏳", increment);
-    // const initial_verified = await verifyInitialProof(initial_proof.proof, initial_proof.publicInputs)
+    // const prover = new ServerProver()
+    // const initial_verified = await prover.verifyInitialProof(initial_proof.proof, initial_proof.publicInputs)
+    // console.log("thisssss: ", initial_verified)
     // show("Initial proof verified: " + initial_verified, increment);
     recursiveProof = {proof: deflattenFields(initial_proof.proof), publicInputs: initial_proof.publicInputs}
     
@@ -165,7 +172,7 @@ async function generate_proof_inner(show: (arg0: string, arg1?: number)=>void, r
           console.log(input)
           // const { witness } = await mptBodyCircuitNoir.execute(input)
           show("Generating recursive proof #" + (i+1) + " ...⏳ ", increment);
-          const {proof, publicInputs} = await generateIntermediaryProof(input)
+          const {proof, publicInputs} = await prover.generateIntermediaryProof(input)
           // show("Verifying intermediary proof #" + (i+1) + " ...⏳ ", increment);
           // const verified = await verifyIntermediaryProof(proof, publicInputs)
           // show("Intermediary proof verified: " + verified, increment);
@@ -176,7 +183,7 @@ async function generate_proof_inner(show: (arg0: string, arg1?: number)=>void, r
           // show("Generating witness for recursive proof #" + (i+1) + " ...⏳ ");
           console.log(input)
           show("Generating intermediary proof #" + (i+1) + " ...⏳ ", increment);
-          const {proof, publicInputs} = await generateIntermediaryProof(input)
+          const {proof, publicInputs} = await prover.generateIntermediaryProof(input)
           console.log(proof)
           console.log(publicInputs)
           // show("Verifying intermediary proof #" + (i+1) + " ...⏳ ", increment);
@@ -210,13 +217,13 @@ async function generate_proof_inner(show: (arg0: string, arg1?: number)=>void, r
     console.log(balanceCheckInput)
     // show("Generating witness for final proof ...⏳ ");
     show("Generating final proof ...⏳ ", increment);
-    const finalProof = await generateFinalProof(balanceCheckInput)
+    const finalProof = await prover.generateFinalProof(balanceCheckInput)
     show("Final proof:")
     console.log(finalProof)
 
     // Verify recursive proof
     show("Verifying final proof... ⏳", increment);
-    const verified = await verifyFinalProof(finalProof.proof, finalProof.publicInputs)
+    const verified: boolean = await prover.verifyFinalProof(finalProof.proof, finalProof.publicInputs)
     show("Final proof verified: " + verified, increment);
 
     return finalProof
@@ -239,7 +246,7 @@ async function initialize(
     
     const address = getAccount(wagmiConfig).address!
     const blockNumber = await getCurrentBlockNumber(getAccount(wagmiConfig).chainId!)
-    const output = await getProof(wagmiConfig, {
+    const output = await getProofWithCustomRpc({
       address: address,
       blockNumber: blockNumber, 
       storageKeys: [],

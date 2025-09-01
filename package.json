@@ -29,6 +29,7 @@
     "clsx": "^2.1.1",
     "crypto-browserify": "^3.12.1",
     "ethers": "^6.15.0",
+    "framer-motion": "^12.23.12",
     "lucide-react": "^0.515.0",
     "mpt-noirjs": "^0.3.1",
     "next": "^15.2.3",

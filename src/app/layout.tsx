@@ -7,6 +7,7 @@ import { Geist } from "next/font/google";
 import Providers from "../components/provider/rainbow-provider";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import { ProverProvider } from '@/components/ProverProvider'
 
 export const metadata: Metadata = {
   title: "Proof ETH Balance In Zero-Knowledge",
@@ -25,11 +26,11 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable} min-h-screen`}>
       <body className="bg-black text-white flex flex-col min-h-screen">
         <Providers>
-        <Header />
-
-          <main className="flex-1">{children}</main>
-        <Footer />
-
+          <ProverProvider>
+            <Header />
+              <main className="flex-1">{children}</main>
+            <Footer />
+          </ProverProvider>
         </Providers>
       </body>
     </html>

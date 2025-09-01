@@ -8,7 +8,7 @@ export default function Footer() {
     <footer className="w-full bg-[#111] text-sm text-gray-400 py-6 px-4 border-t border-gray-800 mt-auto">
       <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
         <p className="text-center md:text-left">
-          © {new Date().getFullYear()} Proof of Balance. All rights reserved.
+          © {new Date().getFullYear()} ZK-Flexor. All rights reserved.
         </p>
 
         <div className="flex space-x-6 items-center">

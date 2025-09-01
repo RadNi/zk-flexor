@@ -7,8 +7,10 @@ import { BadgeCheck, XCircle } from 'lucide-react'
 import { fullVerifyProof, getChainById, readClaim } from '../utils'
 import { ExplorerCacheContext } from '@/components/ExplorerCachContext'
 import type { SigningMessage } from '@/lib/types'
+import { useProver } from '@/components/ProverProvider'
 
 export default function ExplorerDetailPage() {
+  const { prover, mode } = useProver()
   const params = useParams()
   const { id } = params
   const { items, setItems } = useContext(ExplorerCacheContext)
@@ -53,7 +55,7 @@ export default function ExplorerDetailPage() {
   const verifyProof = async (claimId: string, txHash: string) => {
     setVerifying(true)
     try {
-      const result = await fullVerifyProof(claimId, txHash)
+      const result = await fullVerifyProof(prover, claimId, txHash)
       setItems((prev) => {
         const exists = prev.some((itm) => itm.id.toString() === claimId)
         if (!exists && item) return [...prev, { ...item, ...result }]

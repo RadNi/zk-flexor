@@ -1,5 +1,8 @@
 import { innner_layer_vk } from "@/target/verification_keys";
 import { ethers } from "ethers";
+import { getAccount, getProof } from '@wagmi/core'
+import { createPublicClient, http } from 'viem'
+import { HyperliquidProofRPC, wagmiConfig } from '@/config/wagmi'
 
 export function uint8ArrayToStringArray(uint8Array: Uint8Array) {
     return Array.from(uint8Array).map((s) => s.toString())
@@ -75,4 +78,38 @@ export function buf2Bigint(buffer: ArrayBuffer) { // buffer is an ArrayBuffer
 export function shortenHash(hash: string, chars = 6) {
   if (!hash) return ''
   return `${hash.slice(0, chars)}...${hash.slice(-chars)}`
+}
+
+
+// Define Hyperliquid config
+const HYPERLIQUID_CHAIN_ID = 999 // <-- replace with real chain id
+
+export async function getProofWithCustomRpc(request: {
+  address: `0x${string}`,
+  blockNumber: bigint,
+  storageKeys: `0x${string}`[]
+}) {
+  const account = getAccount(wagmiConfig)
+
+  if (account.chainId === HYPERLIQUID_CHAIN_ID) {
+    // 🔥 bypass wagmi + use direct viem client
+    const client = createPublicClient({
+      transport: http(HyperliquidProofRPC),
+      chain: {
+        id: HYPERLIQUID_CHAIN_ID,
+        name: "Hyperliquid",
+        nativeCurrency: { name: "HYPE", symbol: "HYPE", decimals: 18 },
+        rpcUrls: { default: { http: [HyperliquidProofRPC] } }
+      },
+    })
+
+    return client.getProof({
+      address: request.address,
+      storageKeys: request.storageKeys,
+      blockTag: 'latest',
+    })
+  }
+
+  // default path: use wagmi
+  return getProof(wagmiConfig, request)
 }

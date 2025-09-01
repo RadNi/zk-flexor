@@ -1,7 +1,7 @@
 import { getStateRootByRPC } from '@/actions/rpc'
 import { hostNetwork, HyperliquidProofRPC, wagmiConfig } from '@/config/wagmi'
 import type { Claim, SigningMessage, VerificationResult } from '@/lib/types'
-import { FLEXOR_ADDRESS, verifyFinalProof } from "@/lib/utils"
+import { FLEXOR_ADDRESS, type IProver } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
 import { getTransaction, readContract } from '@wagmi/core'
 import abi from "public/Flexor.json"
@@ -90,7 +90,26 @@ export async function readClaim(claimId: string): Promise<Claim> {
     return x as Claim
 }
 
-export async function fullVerifyProof(claimId: string, txHash: string): Promise<VerificationResult> {
+// src/lib/verifier.ts
+// export async function verifyProofRemote(
+//   proof: Uint8Array,
+//   publicInputs: string[]
+// ) {
+//   const res = await fetch("http://localhost:4000/verify", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({
+//       proof: Array.from(proof), // convert Uint8Array → array for JSON
+//       publicInputs,
+//     }),
+//   });
+
+//   if (!res.ok) throw new Error("Remote verification failed");
+//   return await res.json(); // { success: true/false }
+// }
+
+
+export async function fullVerifyProof(prover: IProver, claimId: string, txHash: string): Promise<VerificationResult> {
     const claim = await readClaim(claimId)
     console.log(claim)
     const trx = await getTransaction(wagmiConfig, {hash: txHash as `0x${string}`, chainId: hostNetwork.id})
@@ -151,7 +170,7 @@ export async function fullVerifyProof(claimId: string, txHash: string): Promise<
     message_hash_check = toHex(hashed_message) === "0x" + claim.publicInputs.substring(2 + 32*2, 2 + 32*4)
 
     // verify proof
-    verification_check = await verifyFinalProof(proof, publicInputs)
+    verification_check = await prover.verifyFinalProof(proof, publicInputs)
 
     console.log("name_check ", name_check)
     console.log("address_check ", address_check)
