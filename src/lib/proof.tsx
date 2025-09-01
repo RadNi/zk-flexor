@@ -26,6 +26,14 @@ export async function getCurrentBlockNumber(chainId: number): Promise<bigint> {
 
   return await client.getBlockNumber()
 }
+
+type SignedMessage = {
+  hashed_message : string[]
+  pub_key_x: string[]
+  pub_key_y: string[]
+  signature : string[]
+}
+
 let increment = 0
 // let account: Account
 // let trie_key: number[]
@@ -34,10 +42,6 @@ const nodes_initial: Node[] = []
 const nodes_inner: Node[] = []
 let root: number[]
 let new_roots: number[][]
-let hashed_message : string[]
-let pub_key_x: string[]
-let pub_key_y: string[]
-let signature : string[]
 
 function get_final_vkey_hash() {
   const bytesArrays = final_vk.map(h => toBytes(h))
@@ -68,8 +72,7 @@ function get_signing_message(
 async function sign_message(
   from: `0x${string}`, 
   request: ProofRequest
-) {
-  if (window.ethereum) {
+): Promise<SignedMessage> {
     const msg = get_signing_message(request)
     console.log("msg before signing")
     console.log(msg)
@@ -91,28 +94,34 @@ async function sign_message(
     console.log("Public key")
     console.log(pk)
 
-    pub_key_x = []
+    const pub_key_x: string[] = []
     pk.slice(0, 32).forEach(x => {
         pub_key_x.push("" + x)
     });
-    pub_key_y= []
+    const pub_key_y: string[]= []
     pk.slice(32).forEach(y => {
         pub_key_y.push("" + y)
     });
 
-    signature = hexStringToStringUint8Array(signature_.substring(2, 130))
-    hashed_message = uint8ArrayToStringArray(hashed_message_)
+    const signature = hexStringToStringUint8Array(signature_.substring(2, 130))
+    const hashed_message = uint8ArrayToStringArray(hashed_message_)
 
     console.log("public key x coordinate 📊: ", pub_key_x);
     console.log("public key y coordinate 📊: ", pub_key_y);
     console.log("hashed_message: ", hashed_message)
     console.log("signature: ", signature)
+
+    return {
+      pub_key_x,
+      pub_key_y,
+      signature,
+      hashed_message,
     }
 }
 
 
 
-async function generate_proof_inner(show: (arg0: string, arg1?: number)=>void, request: ProofRequest): Promise<ProofData> {
+async function generate_proof_inner(signedMessage: SignedMessage, show: (arg0: string, arg1?: number)=>void, request: ProofRequest): Promise<ProofData> {
     const {balance_target: prepared_balance_target, balance_target_length} = getBalanceTargetMain(request.balance)
     // show("Generating circuits verification keys... ⏳");
     let recursiveProof;
@@ -207,11 +216,11 @@ async function generate_proof_inner(show: (arg0: string, arg1?: number)=>void, r
         proof: recursiveProof.proof,
         trie_key_index: nodes_initial.length + nodes_inner.length,
         // verification_key: innner_layer_vk,
-        hashed_message: hashed_message,
+        hashed_message: signedMessage.hashed_message,
         // public_key: public_key,
-        pub_key_x: pub_key_x,
-        pub_key_y: pub_key_y,
-        signature: signature,
+        pub_key_x: signedMessage.pub_key_x,
+        pub_key_y: signedMessage.pub_key_y,
+        signature: signedMessage.signature,
         public_inputs: recursiveProof.publicInputs
     } as InputMap
     console.log(balanceCheckInput)
@@ -239,9 +248,14 @@ export function getBalanceTargetMain(balanceTarget: number) {
     return {balance_target, balance_target_length}
 }
 
+type InitializationOutput = {
+  signedMessage: SignedMessage,
+  blockNumber: bigint
+}
+
 async function initialize(
   show: (arg0: string, arg1?: number)=>void, 
-  request: ProofRequest): Promise<bigint> {
+  request: ProofRequest): Promise<InitializationOutput> {
     show("Reading data from RPC... ⏳");
     
     const address = getAccount(wagmiConfig).address!
@@ -251,7 +265,7 @@ async function initialize(
       blockNumber: blockNumber, 
       storageKeys: [],
     })
-    await sign_message(address, request)
+    const signedMessage = await sign_message(address, request)
 
     console.log(output)
     mpt_proof = getNodesFromProof(output.accountProof, address)
@@ -272,7 +286,10 @@ async function initialize(
     console.log(new_roots)
     console.log(root)
     console.log("blockNumber: ", blockNumber)
-    return blockNumber
+    return {
+      blockNumber, 
+      signedMessage
+    }
 }
 
 let currentProgress = 0
@@ -291,9 +308,9 @@ export async function generateProof (
 
 
   console.log(request.balance)
-  const blockNumber = await initialize(tick, request)
+  const {blockNumber, signedMessage} = await initialize(tick, request)
   console.log("generating proof")
-  const {proof, publicInputs} = await generate_proof_inner(tick, request)
+  const {proof, publicInputs} = await generate_proof_inner(signedMessage, tick, request)
   // const proof = Uint8Array.from(Array(16224).fill([10]).flat())
   // const publicInputs = Array(97).fill([`0x${10}`]).flat()
   const submitionInput: SubmitionInputs = {
