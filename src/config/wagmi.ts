@@ -3,7 +3,7 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { arbitrum, bsc, mainnet } from "wagmi/chains";
 import { type Chain } from 'viem';
-import { http } from 'wagmi';
+import { createConfig, http, injected } from 'wagmi';
 
 export const localTestnet = {
   id: 31337,
@@ -75,6 +75,7 @@ export const hyperliquidMainnet = {
 
 export const HyperliquidProofRPC = "https://rpc.purroofgroup.com"
 export const hostNetwork = hyperliquidMainnet
+export const ETHRPC = "https://docs-demo.quiknode.pro/"
 
 
 export const wagmiConfig = getDefaultConfig({
@@ -82,7 +83,7 @@ export const wagmiConfig = getDefaultConfig({
   projectId: "999",
   chains: [mainnet, hyperliquidMainnet, bsc, arbitrum],
   transports: {
-    [mainnet.id]: http(),
+    [mainnet.id]: http(ETHRPC),
     [bsc.id]: http(),
     [arbitrum.id]: http(),
     [hyperliquidMainnet.id]: http(undefined, {timeout: 60_000}),

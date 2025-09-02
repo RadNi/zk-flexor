@@ -1,5 +1,5 @@
 import { getStateRootByRPC } from '@/actions/rpc'
-import { hostNetwork, HyperliquidProofRPC, wagmiConfig } from '@/config/wagmi'
+import { ETHRPC, hostNetwork, HyperliquidProofRPC, wagmiConfig } from '@/config/wagmi'
 import type { Claim, SigningMessage, VerificationResult } from '@/lib/types'
 import { FLEXOR_ADDRESS, type IProver } from "@/lib/utils"
 import { hashPersonalMessage } from '@ethereumjs/util'
@@ -12,6 +12,15 @@ export const PROOF_CHUNK_NUMBER = 1;
 export const CHUNK_SIZE = 16000;
 export const LAST_PART_SIZE = 224;
 
+
+function getPublicClient(chainId: number) {
+    const chain = getChainById(chainId)
+    return createPublicClient({
+    chain,
+    transport: http(chainId == 1 ? ETHRPC : chain!.rpcUrls.default.http[0]), // or chain.rpcUrls.public.http[0]
+  })
+}
+
 // Find chain config by chainId from wagmiConfig.chains
 export function getChainById(chainId: number) {
   return wagmiConfig.chains.find((chain) => chain.id === chainId)
@@ -22,10 +31,7 @@ export async function getLastBlockByChainId(chainId: number) {
   if (!chain) throw new Error(`Unsupported chainId ${chainId}`)
 
   // Create client dynamically for this chain using its first RPC url
-  const client = createPublicClient({
-    chain,
-    transport: http(chain.rpcUrls.default.http[0]), // or chain.rpcUrls.public.http[0]
-  })
+  const client = getPublicClient(chainId)
 
   // Fetch block
   const block = await client.getBlock()
@@ -51,10 +57,7 @@ async function getBlockByChainId(chainId: number, blockNumber: bigint ) {
   if (!chain) throw new Error(`Unsupported chainId ${chainId}`)
 
   // Create client dynamically for this chain using its first RPC url
-  const client = createPublicClient({
-    chain,
-    transport: http(chain.rpcUrls.default.http[0]), // or chain.rpcUrls.public.http[0]
-  })
+  const client = getPublicClient(chainId)
 
   // Fetch block
   const block = await client.getBlock({ blockNumber })
@@ -115,7 +118,6 @@ export async function fullVerifyProof(prover: IProver, claimId: string, txHash: 
     const trx = await getTransaction(wagmiConfig, {hash: txHash as `0x${string}`, chainId: hostNetwork.id})
     const proofPart = trx.input.substring(522, 32448 + 522)
     const totalProof: `0x${string}` = `0x${proofPart}`
-    console.log(totalProof)
     const proof = fromHex(totalProof, 'bytes')
     const publicInputs = Array.from(fromHex(claim.publicInputs, 'bytes'), (byte) => "0x" + byte.toString(16).padStart(2, '0')) 
     console.log(claim.full_message)
@@ -170,14 +172,21 @@ export async function fullVerifyProof(prover: IProver, claimId: string, txHash: 
     message_hash_check = toHex(hashed_message) === "0x" + claim.publicInputs.substring(2 + 32*2, 2 + 32*4)
 
     // verify proof
-    verification_check = await prover.verifyFinalProof(proof, publicInputs)
-
     console.log("name_check ", name_check)
     console.log("address_check ", address_check)
     console.log("stateRoot_check ", stateRoot_check)
-    console.log("verification_check ", verification_check)
     console.log("balance_target_check", balance_target_check)
     console.log("message_hash_check", message_hash_check)
+    console.log("verifying final proof:")
+    console.log(proof, publicInputs)
+    verification_check = await prover.verifyFinalProof(proof, publicInputs)
+
+    
+    
+    
+    console.log("verification_check ", verification_check)
+    
+    
 
     if (!name_check)
         statusMessage += "name check faild - "
